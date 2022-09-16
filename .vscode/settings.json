@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "errno.h": "c",
+        "c2mir.h": "c",
+        "mir.h": "c",
+        "mir-dlist.h": "c",
+        "stdio.h": "c",
+        "stat.h": "c"
+    }
+}
