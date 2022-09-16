@@ -5,6 +5,10 @@
         "mir.h": "c",
         "mir-dlist.h": "c",
         "stdio.h": "c",
-        "stat.h": "c"
+        "stat.h": "c",
+        "lua.h": "c",
+        "mir-varr.h": "c",
+        "lualib.h": "c",
+        "lauxlib.h": "c"
     }
 }

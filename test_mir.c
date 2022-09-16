@@ -45,6 +45,7 @@ void *import_resolver(const char *name)
     return NULL;
 }
 
+typedef  int (*fun_add_t) (int, int);
 
 
 int main(int argc, char const *argv[])
@@ -86,7 +87,7 @@ int main(int argc, char const *argv[])
         printf("can not find add function\n");
         return 0;
     }
-    int (*fun_add) (int, int);
+    fun_add_t fun_add;
     MIR_load_external(ctx, "printf", printf);
     MIR_link (ctx, MIR_set_gen_interface, NULL);
     MIR_gen (ctx, 0, add_func);
