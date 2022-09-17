@@ -103,7 +103,7 @@ lua_CFunction create_lua_func_from_c(lua_State *L, const char *source_name, cons
         }
         MIR_load_module(ctx, module);
     }
-    MIR_gen_set_optimize_level(ctx, 0, 3);
+    MIR_gen_set_optimize_level(ctx, 0, 2);
     if(rt_func == NULL)
     {
         luaL_error(L, "rt_func == NULL");

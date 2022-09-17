@@ -1,15 +1,21 @@
 CC := gcc
-CFLAGS := -Wall -std=gnu11 -g -fPIC
+CFLAGS := -Wall -std=gnu11 -g -fPIC -O2
 LIBPATH := -L./ -L/usr/local/lib
 INCLUDE := -I./mir/
 
-all: test_mir luamir.so
+all: test_mir luamir.so luacmatrix.so
 
 test_mir: test_mir.o libmir.a
 	$(CC) $(CFLAGS) -o test_mir test_mir.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
 
 luamir.so: c2luafun.o lua-mir.o libmir.a lua_std_cfunc.o
 	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2luafun.o lua_std_cfunc.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
+
+luacmatrix.so: luacmatrix.o
+	$(CC) $(CFLAGS) -shared -o luacmatrix.so luacmatrix.o
+
+luacmatrix.o: luacmatrix.c
+	$(CC) $(CFLAGS) -c -o luacmatrix.o luacmatrix.c
 
 c2luafun.o: c2luafun.c c2luafun.h
 	$(CC) $(CFLAGS) -c c2luafun.c $(INCLUDE)

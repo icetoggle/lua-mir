@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/usr/local/bin/lua",
-            "args": ["./test.lua"],
+            "args": ["./test_cadd.lua"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

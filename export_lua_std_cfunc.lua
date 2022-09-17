@@ -2,11 +2,14 @@ local file = io.open('/usr/local/include/lua.h', 'r')
 local export_func_list = {}
 for line in file:lines() do
     -- %((%w+)%) %(lua_State%* L.*%);
-    local func = string.match(line, 'LUA_API[%s%w%*]+%(([a-zA-z_]+)%) %(lua_State %*L.*%);')
+    local func = string.match(line, 'LUA_API[%s%w%*_]+%(([a-zA-z_]+)%) %(lua_State %*L.*%);')
     if func then
         table.insert(export_func_list, func)
     end
 end
+table.insert(export_func_list, 'malloc')
+table.insert(export_func_list, 'free')
+table.insert(export_func_list, 'printf')
 
 table.sort(export_func_list)
 file:close()
@@ -35,7 +38,8 @@ writeln(generate_c_file, '#include "lua_std_cfunc.h"')
 writeln(generate_c_file, '#include "lua.h"')
 writeln(generate_c_file, '#include "lauxlib.h"')
 writeln(generate_c_file, '#include "lualib.h"')
-
+writeln(generate_c_file, '#include "string.h"')
+writeln(generate_c_file, '#include "stdlib.h"')
 writeln(generate_c_file, 'typedef struct {')
 inc_tabnum()
 writeln(generate_c_file, 'const char *name;')
