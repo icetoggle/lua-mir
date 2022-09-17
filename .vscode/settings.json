@@ -9,6 +9,7 @@
         "lua.h": "c",
         "mir-varr.h": "c",
         "lualib.h": "c",
-        "lauxlib.h": "c"
+        "lauxlib.h": "c",
+        "lua_std_cfunc.h": "c"
     }
 }

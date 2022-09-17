@@ -1,5 +1,6 @@
 #include "c2luafun.h"
 #include <stdio.h>
+#include <string.h>
 #include <mir.h>
 #include <mir-dlist.h>
 #include <mir-gen.h>
@@ -8,6 +9,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+
+#include "lua_std_cfunc.h"
 
 struct JitCode {
     char *code;
@@ -57,7 +60,6 @@ lua_CFunction create_lua_func_from_c(lua_State *L, const char *source_name, cons
     for(module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(ctx)); module; module = DLIST_NEXT(MIR_module_t, module)) {
         for(func = DLIST_HEAD(MIR_item_t, module->items); func; func = DLIST_NEXT(MIR_item_t, func)) {
             if (func->item_type == MIR_func_item) {
-                printf("%s %s\n", func->u.func->name, source_name);
                 if (strcmp(func->u.func->name, source_name) == 0) {
                     rt_func = func;
                 }
@@ -71,8 +73,7 @@ lua_CFunction create_lua_func_from_c(lua_State *L, const char *source_name, cons
         luaL_error(L, "rt_func == NULL");
         return NULL;
     }
-    MIR_load_external(ctx, "lua_pushstring", lua_pushstring);
-    MIR_link(ctx, MIR_set_gen_interface, NULL);
+    MIR_link(ctx, MIR_set_gen_interface, import_luacfun_resolver);
     MIR_gen(ctx, 0, rt_func);
     lua_CFunction lua_func = (lua_CFunction)rt_func->addr;
     return lua_func;

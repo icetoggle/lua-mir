@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <mir.h>
 #include <mir-dlist.h>
 #include <mir-gen.h>
@@ -43,6 +44,22 @@ void *import_resolver(const char *name)
         if (!strcmp(func_list[i].name, name))
             return func_list[i].func;
     return NULL;
+}
+
+int binary_search(const char *value)
+{
+    int l = 0, r = sizeof(func_list) / sizeof(func_obj_t) - 1;
+    while(l <= r) {
+        int mid = (l + r) / 2;
+        int cmp = strcmp(func_list[mid].name, value);
+        if (cmp == 0) {
+            return mid;
+        } else if (cmp < 0) {
+            l = mid + 1;
+        } else {
+            r = mid - 1;
+        }
+    }
 }
 
 typedef  int (*fun_add_t) (int, int);
@@ -91,9 +108,7 @@ int main(int argc, char const *argv[])
     MIR_load_external(ctx, "printf", printf);
     MIR_link (ctx, MIR_set_gen_interface, NULL);
     MIR_gen (ctx, 0, add_func);
-    printf("%d\n", add_func->addr);
     fun_add = add_func->addr;
-    printf("%d\n", fun_add);
     int result = fun_add(1, 2);
     printf("result = %d\n", result);
     return 0;

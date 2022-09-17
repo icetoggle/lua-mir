@@ -1,3 +1,5 @@
-test_mir.o
+*.o
 test_mir
-libmir.a
+*.a
+*.so
+lua_std_cfunc.c

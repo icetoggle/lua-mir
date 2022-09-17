@@ -6,10 +6,9 @@
 
 static int l_cjit(lua_State *L)
 {
-    const char *souce = luaL_checkstring(L, 1);
+    const char *source = luaL_checkstring(L, 1);
     const char *code = luaL_checkstring(L, 2);
-    printf("code: %s\n", code);
-    lua_CFunction func = create_lua_func_from_c(L, "test", code);
+    lua_CFunction func = create_lua_func_from_c(L, source, code);
     if(func == NULL) {
         return 0;
     }
