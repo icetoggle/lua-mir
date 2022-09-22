@@ -1,4 +1,4 @@
-#include "c2luafun.h"
+#include "c2cluafunc.h"
 #include <stdio.h>
 #include <string.h>
 #include <mir.h>
@@ -36,7 +36,7 @@ static int get_data(void *data)
 
 
 
-lua_CFunction create_lua_func_from_c(lua_State *L, const char *source_name, const char* code)
+lua_CFunction create_clua_func_from_c(lua_State *L, const char *source_name, const char* code)
 {
     MIR_context_t ctx = init_mir_context(L);
     MIR_gen_init(ctx, 1);

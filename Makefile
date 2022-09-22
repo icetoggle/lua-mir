@@ -1,15 +1,15 @@
 CC := gcc
 CFLAGS := -Wall -std=gnu11 -g -fPIC -O2
 LIBPATH := -L./ -L/usr/local/lib
-INCLUDE := -I./mir/
+INCLUDE := -I./mir/ -I/../lua/src
 
 all: test_mir luamir.so luacmatrix.so
 
 test_mir: test_mir.o libmir.a
 	$(CC) $(CFLAGS) -o test_mir test_mir.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
 
-luamir.so: c2luafun.o lua-mir.o libmir.a lua_std_cfunc.o mir_utils.o
-	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2luafun.o lua_std_cfunc.o mir_utils.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
+luamir.so: c2cluafunc.o lua-mir.o libmir.a lua_std_cfunc.o mir_utils.o
+	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2cluafunc.o lua_std_cfunc.o mir_utils.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
 
 luacmatrix.so: luacmatrix.o
 	$(CC) $(CFLAGS) -shared -o luacmatrix.so luacmatrix.o
@@ -17,10 +17,10 @@ luacmatrix.so: luacmatrix.o
 luacmatrix.o: luacmatrix.c
 	$(CC) $(CFLAGS) -c -o luacmatrix.o luacmatrix.c
 
-c2luafun.o: c2luafun.c c2luafun.h
-	$(CC) $(CFLAGS) -c c2luafun.c $(INCLUDE)
+c2cluafunc.o: c2cluafunc.c c2cluafunc.h
+	$(CC) $(CFLAGS) -c c2cluafunc.c $(INCLUDE)
 
-lua-mir.o: lua-mir.c c2luafun.h lua_std_cfunc.h
+lua-mir.o: lua-mir.c c2cluafunc.h lua_std_cfunc.h
 	$(CC) $(CFLAGS) -c lua-mir.c $(INCLUDE)
 
 mir_utils.o: mir_utils.c mir_utils.h

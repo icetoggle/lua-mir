@@ -3,12 +3,11 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/mir/",
-                "/usr/local/include"
+                "/usr/local/include",
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
-            "cStandard": "gnu17",
+            "cStandard": "c11",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64",
             "configurationProvider": "ms-vscode.makefile-tools"

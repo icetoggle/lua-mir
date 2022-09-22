@@ -11,6 +11,9 @@
         "lualib.h": "c",
         "lauxlib.h": "c",
         "lua_std_cfunc.h": "c",
-        "mir_utils.h": "c"
+        "mir_utils.h": "c",
+        "mir-gen.h": "c",
+        "lobject.h": "c",
+        "stdarg.h": "c"
     }
 }
