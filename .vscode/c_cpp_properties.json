@@ -3,14 +3,14 @@
         {
             "name": "Linux",
             "includePath": [
-                "/usr/local/include",
+                "${workspaceFolder}/mir/",
+                "${workspaceFolder}/../lua/src/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
-            "cStandard": "c11",
+            "cStandard": "gnu11",
             "cppStandard": "gnu++14",
-            "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.makefile-tools"
+            "intelliSenseMode": "${default}"
         }
     ],
     "version": 4

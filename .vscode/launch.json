@@ -8,8 +8,8 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/usr/local/bin/lua",
-            "args": ["./test_mirmatrix.lua"],
+            "program": "${workspaceFolder}/lua/lua",
+            "args": ["./test.lua"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
@@ -26,7 +26,10 @@
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            "sourceFileMap": {
+                "${workspaceFolder}/lua": "./",
+            }
         }
 
     ]
