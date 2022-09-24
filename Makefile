@@ -1,15 +1,15 @@
 CC := gcc
 CFLAGS := -Wall -std=gnu11 -g -fPIC -O2
-LIBPATH := -L./ -L/usr/local/lib -L./lua/
-INCLUDE := -I./mir/ -I./../lua/src/
+LIBPATH := -L./ -L./lua/
+INCLUDE := -I./mir/ -I./lua/
 
 all: test_mir luamir.so luacmatrix.so testadd.so
 
 test_mir: test_mir.o libmir.a
 	$(CC) $(CFLAGS) -o test_mir test_mir.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
 
-luamir.so: c2cluafunc.o lua-mir.o libmir.a lua_std_cfunc.o mir_utils.o lua2cluafunc.o membuf.o
-	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2cluafunc.o lua2cluafunc.o lua_std_cfunc.o mir_utils.o membuf.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
+luamir.so: c2cluafunc.o lua-mir.o libmir.a lua_std_cfunc.o mir_utils.o lua2cluafunc.o membuf.o parse_opcode.o
+	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2cluafunc.o lua2cluafunc.o lua_std_cfunc.o mir_utils.o membuf.o parse_opcode.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
 
 luacmatrix.so: luacmatrix.o
 	$(CC) $(CFLAGS) -shared -o luacmatrix.so luacmatrix.o
@@ -50,6 +50,8 @@ testadd.so: testadd.o
 testadd.o: testadd.c
 	$(CC) $(CFLAGS) -c testadd.c $(INCLUDE)
 
+parse_opcode.o: parse_opcode.c
+	$(CC) $(CFLAGS) -c parse_opcode.c $(INCLUDE)
 
 
 .PHONE: clean

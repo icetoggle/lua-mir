@@ -45,7 +45,7 @@ lua_CFunction create_clua_func_from_c(lua_State *L, const char *source_name, con
     memset(&options, 0, sizeof(options));
     VARR(char_ptr_t) *headers;
     VARR_CREATE(char_ptr_t, headers, 0);
-    VARR_PUSH(char_ptr_t, headers, "/usr/local/include");
+    VARR_PUSH(char_ptr_t, headers, "./lua");
     options.include_dirs = VARR_ADDR(char_ptr_t, headers);
     options.include_dirs_num = 1;
     struct JitCode code_data;

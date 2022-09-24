@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/mir/",
-                "${workspaceFolder}/../lua/src/"
+                "${workspaceFolder}/lua/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

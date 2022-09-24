@@ -6,6 +6,7 @@
 #include "membuf.h"
 #include <lopcodes.h>
 #include "c2cluafunc.h"
+#include "parse_opcode.h"
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
 
 static TValue *index2value (lua_State *L, int idx) {
@@ -88,8 +89,7 @@ static int get_jit_funcid(lua_State *L)
 }
 
 
-#define MC(str) membuf_append(&buf, str, sizeof(str) - 1)
-#define MCF(str, ...) membuf_append_fmt(buf, str, ##__VA_ARGS__)
+
 
 
 #define RA(i)	(base+GETARG_A(i))
@@ -101,12 +101,23 @@ static int get_jit_funcid(lua_State *L)
 #define KC(i)	(k+GETARG_C(i))
 #define RKC(i)	((TESTARG_k(i)) ? k + GETARG_C(i) : s2v(base + GETARG_C(i)))
 
+
+
 bool codegen_lua2c(lua_State *L, LClosure *cl, int fun_id, Membuf *buf)
 {
+    MCF("#include <lua.h>\n");
+    MCF("#include <lauxlib.h>\n");
+    MCF("#include <lualib.h>\n");
+    MCF("#include <lobject.h>\n");
+    MCF("#include <lstate.h>\n");
+    MCF("#include <lgc.h>\n");
+    MCF("#include <luaconf.h>\n");
+    MCF("#include <lapi.h>\n");
+    MCF("#include <llimits.h>\n");
+    MCF("#include <lvm.h>\n");
     MCF("static int __jit_lfunc%d(lua_State *L) {\n", fun_id);
     MCF("    CallInfo *ci = L->ci;\n");
     MCF("    StkId base = ci->func + 1;\n");
-    MCF("    Instruction *pc;\n");
 
 
     for(int pc = 0; pc < cl->p->sizecode; ++pc)
@@ -118,19 +129,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int fun_id, Membuf *buf)
         int C = GETARG_C(i);
         switch(op) {
             case OP_ADD: {
-                MCF("{\n");
-                MCF("TValue *v1 = s2v(base + %u);\n", A);
-                MCF("TValue *v2 = s2v(base + %u);\n", C);
-                MCF("if(ttisinteger(v1) && ttisinteger(v2)) {\n");
-                MCF("    lua_Integer i1 = ivalue(v1);\n");
-                MCF("    lua_Integer i2 = ivalue(v2);\n");
-                MCF("    setivalue(s2v(base + %u), i1 + i2);\n", A);
-                MCF("} else if(ttisfloat(v1)) {\n");
-                MCF("    lua_Number n1 = nvalue(v1);\n");
-                MCF("    lua_Number n2 = nvalue(v2);\n");
-                MCF("    setfltvalue(s2v(base + %u), n1 + n2);\n", A);
-                MCF("}\n");
-                MCF("}\n");
+                parse_op_arith(buf,'+', A, B, C);
                 break;
             }
             // case OP_MMBIN: {
@@ -147,15 +146,19 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int fun_id, Membuf *buf)
             // }
             case OP_RETURN1: {
                 MCF("{\n");
-                MCF("TValue *v1 = s2v(base + %u);\n", A);
-                MCF("setobjs2s(L, base - 1, base + %u);\n", A);
+                MCF("setobjs2s(L, L->top, base + %u);\n", A);
+                MCF("api_incr_top(L);\n");
+                MCF("luaC_checkGC(L);\n");
+                MCF("return 1;\n");
+                MCF("}\n");
                 break;
             }
+            
             default:
                 break;
         }
-        MCF("}\n");
     }
+    MCF("}\n");
     return true;
 }
 

@@ -17,6 +17,8 @@
         "stdarg.h": "c",
         "lua2cluafunc.h": "c",
         "string.h": "c",
-        "ljumptab.h": "c"
+        "ljumptab.h": "c",
+        "lstate.h": "c",
+        "llimits.h": "c"
     }
 }

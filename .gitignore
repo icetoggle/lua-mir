@@ -3,3 +3,6 @@ test_mir
 *.a
 *.so
 lua_std_cfunc.c
+lua/lua
+lua/luac
+lua/luas

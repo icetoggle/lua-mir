@@ -1,5 +1,7 @@
+
+
 local file = io.open('/usr/local/include/lua.h', 'r')
-local export_func_list = {}
+
 for line in file:lines() do
     -- %((%w+)%) %(lua_State%* L.*%);
     local func = string.match(line, 'LUA_API[%s%w%*_]+%(([a-zA-z_]+)%) %(lua_State %*L.*%);')
