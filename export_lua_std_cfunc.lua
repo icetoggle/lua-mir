@@ -1,20 +1,58 @@
+local export_func_list = {}
 
+local black_func = {
+    ["luaH_mainposition"] = true,
+    ["luaH_isdummy"] = true,
+}
 
-local file = io.open('/usr/local/include/lua.h', 'r')
-
-for line in file:lines() do
-    -- %((%w+)%) %(lua_State%* L.*%);
-    local func = string.match(line, 'LUA_API[%s%w%*_]+%(([a-zA-z_]+)%) %(lua_State %*L.*%);')
-    if func then
-        table.insert(export_func_list, func)
+local function gen_import_func(path)
+    local file = io.open(path, 'r')
+    for line in file:lines() do
+        -- %((%w+)%) %(lua_State%* L.*%);
+        local func = string.match(line, 'LUALIB_API[%w_%s*]+%(([a-zA-z_]+)%) %(.*%);')
+        if not func then
+            func = string.match(line, 'LUAI_FUNC [%w_%s*]+ ([a-zA-z_]+) %(.*%)')
+        end
+        if not func then
+            func = string.match(line, 'LUA_API [%w_]+ %(([a-zA-z_]+)%) %(.*%)')
+        end
+        if black_func[func] then
+            goto continue
+        end
+        if func then
+            print(func, line)
+            table.insert(export_func_list, func)
+        end
+        ::continue::
     end
+    file:close()
 end
+local import_func_h = {
+    "lauxlib.h",
+    "ldebug.h",
+    "ldo.h",
+    "lfunc.h",
+    "lgc.h",
+    "lmem.h",
+    "lobject.h",
+    "lstate.h",
+    "lstring.h",
+    "ltable.h",
+    "ltm.h",
+    "lua.h",
+    "lundump.h",
+    "lvm.h",
+}
+for _, h in ipairs(import_func_h) do
+    gen_import_func("lua/" .. h)
+end
+
 table.insert(export_func_list, 'malloc')
 table.insert(export_func_list, 'free')
 table.insert(export_func_list, 'printf')
+table.insert(export_func_list, 'memcpy')
 
 table.sort(export_func_list)
-file:close()
 
 local tab_str = '    '
 local tabnum = 0
@@ -37,9 +75,10 @@ end
 
 local generate_c_file = io.open('lua_std_cfunc.c', 'w')
 writeln(generate_c_file, '#include "lua_std_cfunc.h"')
-writeln(generate_c_file, '#include "lua.h"')
-writeln(generate_c_file, '#include "lauxlib.h"')
-writeln(generate_c_file, '#include "lualib.h"')
+for _, h in ipairs(import_func_h) do
+    writeln(generate_c_file, '#include "' .. h .. '"')
+end
+
 writeln(generate_c_file, '#include "string.h"')
 writeln(generate_c_file, '#include "stdlib.h"')
 writeln(generate_c_file, 'typedef struct {')
@@ -82,6 +121,7 @@ dec_tabnum()
 writeln(generate_c_file, '}')
 dec_tabnum()
 writeln(generate_c_file, '}')
+writeln(generate_c_file, "printf(\"import_luacfun_resolver: %s not found\\n\", name);");
 dec_tabnum()
 writeln(generate_c_file, '}')
 generate_c_file:close()
