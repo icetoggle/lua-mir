@@ -7,6 +7,7 @@
 #include <lopcodes.h>
 #include "c2cluafunc.h"
 #include "parse_opcode.h"
+#include <assert.h>
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
 
 static TValue *index2value (lua_State *L, int idx) {
@@ -103,7 +104,7 @@ static int get_jit_funcid(lua_State *L)
 
 
 
-bool codegen_lua2c(lua_State *L, LClosure *cl, int fun_id, Membuf *buf)
+bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
 {
     MCF("#include <lua.h>\n");
     MCF("#include <lauxlib.h>\n");
@@ -115,11 +116,11 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int fun_id, Membuf *buf)
     MCF("#include <lapi.h>\n");
     MCF("#include <llimits.h>\n");
     MCF("#include <lvm.h>\n");
-    MCF("static int __jit_lfunc%d(lua_State *L) {\n", fun_id);
+    MCF("#define savestate(L,ci)		(L->top = ci->top)\n");
+    MCF("#define Protect(exp)  (savestate(L,ci), (exp))\n");
+    MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
     MCF("    CallInfo *ci = L->ci;\n");
     MCF("    StkId base = ci->func + 1;\n");
-
-
     for(int pc = 0; pc < cl->p->sizecode; ++pc)
     {
         const Instruction i = cl->p->code[pc];
@@ -127,23 +128,24 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int fun_id, Membuf *buf)
         int A = GETARG_A(i);
         int B = GETARG_B(i);
         int C = GETARG_C(i);
+        MCF("__jitfunc%d_op%d: \n", func_id, pc);
         switch(op) {
             case OP_ADD: {
-                parse_op_arith(buf,'+', A, B, C);
+                parse_op_arith(func_id, pc, buf,'+', A, B, C);
                 break;
             }
-            // case OP_MMBIN: {
-            //     Instruction pi = cl->p->code[pc - 2];
-            //     MCF("{\n");
-            //     MCF("TValue *rb = s2v(base + %u);\n", B);
-            //     MCF("TMS tm = (TMS)%u;\n", C);
-            //     MCF("int flip = %u;\n", GETARG_k(i));
-            //     MCF("StkId result = base + %u;\n", GETARG_A(pi));
-            //     assert(OP_ADD <= GET_OPCODE(pi) && GET_OPCODE(pi) <= OP_SHR);
-            //     MCF("Protect(luaT_trybiniTM(L, s2v(ra), imm, flip, result, tm));\n");
-            //     MCF("}\n");
-            //     break;
-            // }
+            case OP_MMBIN: {
+                Instruction pi = cl->p->code[pc - 1];
+                MCF("{\n");
+                MCF("TValue *rb = s2v(base + %u);\n", B);
+                MCF("TMS tm = (TMS)%u;\n", C);
+                MCF("int flip = %u;\n", GETARG_k(i));
+                MCF("StkId result = base + %u;\n", GETARG_A(pi));
+                assert(OP_ADD <= GET_OPCODE(pi) && GET_OPCODE(pi) <= OP_SHR);
+                MCF("luaT_trybinTM(L, s2v(base + %u), rb, result, tm);\n", A);
+                MCF("}\n");
+                break;
+            }
             case OP_RETURN1: {
                 MCF("{\n");
                 MCF("setobjs2s(L, L->top, base + %u);\n", A);
@@ -158,6 +160,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int fun_id, Membuf *buf)
                 break;
         }
     }
+    MCF("return 0;\n");
     MCF("}\n");
     return true;
 }

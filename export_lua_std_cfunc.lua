@@ -9,12 +9,12 @@ local function gen_import_func(path)
     local file = io.open(path, 'r')
     for line in file:lines() do
         -- %((%w+)%) %(lua_State%* L.*%);
-        local func = string.match(line, 'LUALIB_API[%w_%s*]+%(([a-zA-z_]+)%) %(.*%);')
+        local func = string.match(line, 'LUALIB_API[%w_%s*]+%(([a-zA-z_]+)%) %(.*')
         if not func then
-            func = string.match(line, 'LUAI_FUNC [%w_%s*]+ ([a-zA-z_]+) %(.*%)')
+            func = string.match(line, 'LUAI_FUNC [%w_%s*]+ ([a-zA-z_]+) %(.*')
         end
         if not func then
-            func = string.match(line, 'LUA_API [%w_]+ %(([a-zA-z_]+)%) %(.*%)')
+            func = string.match(line, 'LUA_API [%w_]+ %(([a-zA-z_]+)%) %(.*')
         end
         if black_func[func] then
             goto continue
@@ -42,6 +42,7 @@ local import_func_h = {
     "lua.h",
     "lundump.h",
     "lvm.h",
+    "ltm.h",
 }
 for _, h in ipairs(import_func_h) do
     gen_import_func("lua/" .. h)

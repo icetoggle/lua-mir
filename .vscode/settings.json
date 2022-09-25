@@ -19,6 +19,8 @@
         "string.h": "c",
         "ljumptab.h": "c",
         "lstate.h": "c",
-        "llimits.h": "c"
+        "llimits.h": "c",
+        "ltm.h": "c",
+        "lundump.h": "c"
     }
 }
