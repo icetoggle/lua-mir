@@ -21,6 +21,7 @@
         "lstate.h": "c",
         "llimits.h": "c",
         "ltm.h": "c",
-        "lundump.h": "c"
+        "lundump.h": "c",
+        "cmath": "c"
     }
 }

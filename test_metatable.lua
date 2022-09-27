@@ -1,5 +1,5 @@
 local luamir = require 'luamir'
-local u = {x = 1, y = 1}
+local u = {x = 3, y = 1}
 local v = {x = 2, y = 2}
 local mt = {__add = function(l, r) 
     return {x = l.x + r.x, y = l.y + r.y}

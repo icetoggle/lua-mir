@@ -131,7 +131,31 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
         MCF("__jitfunc%d_op%d: \n", func_id, pc);
         switch(op) {
             case OP_ADD: {
-                parse_op_arith(func_id, pc, buf,'+', A, B, C);
+                parse_op_arith(func_id, pc, buf, '+', A, B, C);
+                break;
+            }
+            case OP_SUB: {
+                parse_op_arith(func_id, pc, buf, '-', A, B, C);
+                break;
+            }
+            case OP_MUL: {
+                parse_op_arith(func_id, pc, buf, '*', A, B, C);
+                break;
+            }
+            case OP_MOD: {
+                parse_op_arith(func_id, pc, buf, '%', A, B, C);
+                break;
+            }
+            case OP_POW: {
+                parse_op_arithf(func_id, pc, buf, "^", A, B, C);
+                break;
+            }
+            case OP_DIV: {
+                parse_op_arithf(func_id, pc, buf, "/", A, B, C);
+                break;
+            }
+            case OP_IDIV: {
+                parse_op_arith(func_id, pc, buf, '\\', A, B, C);
                 break;
             }
             case OP_MMBIN: {
