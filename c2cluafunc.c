@@ -19,9 +19,6 @@ struct JitCode {
     size_t cur_idx; 
 };
 
-typedef const char *char_ptr_t;
-
-DEF_VARR (char_ptr_t);
 
 
 static int get_data(void *data)
@@ -38,25 +35,20 @@ static int get_data(void *data)
 
 lua_CFunction create_clua_func_from_c(lua_State *L, const char *source_name, const char* code)
 {
-    MIR_context_t ctx = init_mir_context(L);
-    MIR_gen_init(ctx, 1);
+    mir_ctx_wrapper* wrapper = init_mir_context(L);
+    MIR_context_t ctx = wrapper->ctx;
+    MIR_gen_init(ctx, 2);
     c2mir_init(ctx);
-    struct c2mir_options options;
-    memset(&options, 0, sizeof(options));
-    VARR(char_ptr_t) *headers;
-    VARR_CREATE(char_ptr_t, headers, 0);
-    VARR_PUSH(char_ptr_t, headers, "./lua");
-    options.include_dirs = VARR_ADDR(char_ptr_t, headers);
-    options.include_dirs_num = 1;
     struct JitCode code_data;
     code_data.code = (char *)code;
     code_data.code_size = strlen(code);
     code_data.cur_idx = 0;
-    if(!c2mir_compile(ctx, &options, get_data, &code_data, source_name, NULL)) {
+    wrapper->options.module_num++;
+    if(!c2mir_compile(ctx, &wrapper->options, get_data, &code_data, source_name, NULL)) {
+        puts(code);
         luaL_error(L, "c2mir_compile failed");
         return NULL;
     }
-    c2mir_finish(ctx);
     MIR_module_t module;
     MIR_item_t func = NULL;
     MIR_item_t rt_func = NULL;
@@ -79,6 +71,7 @@ lua_CFunction create_clua_func_from_c(lua_State *L, const char *source_name, con
     MIR_link(ctx, MIR_set_gen_interface, import_luacfun_resolver);
     MIR_gen(ctx, 0, rt_func);
     MIR_gen_finish(ctx);
+    c2mir_finish(ctx);
     lua_CFunction lua_func = (lua_CFunction)rt_func->addr;
     return lua_func;
 }

@@ -1,7 +1,7 @@
 CC := gcc
 CFLAGS := -Wall -std=gnu11 -g -fPIC -O2
 LIBPATH := -L./
-INCLUDE := -I./mir/ -I./lua/
+INCLUDE := -I./mir/ -I./lua-src/
 
 all: test_mir luamir.so luacmatrix.so testadd.so
 
@@ -33,7 +33,7 @@ libmir.a:
 	cd mir && make -j 4 && cp libmir.a ../ && make clean
 
 liblua.a:
-	cd lua && make -j 4 && cp liblua.a ../ && make clean
+	cd lua-src && make -j 4 && cp liblua.a ../ && cp lua ../lua && make clean
 
 lua_std_cfunc.o: lua_std_cfunc.c lua_std_cfunc.h
 	$(CC) $(CFLAGS) -c lua_std_cfunc.c $(INCLUDE) -w

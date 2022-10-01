@@ -52,6 +52,7 @@ const char *arithf_opcode(char op)
     default:
         break;
     }
+    return NULL;
 }
 
 void parse_op_arith(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)

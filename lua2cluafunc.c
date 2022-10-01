@@ -82,9 +82,10 @@ static int get_jit_funcid(lua_State *L)
         return 0;
     }
     int fun_id = lua_tointeger(L, -1);
+    fun_id++;
     lua_pop(L, 1);
     lua_pushstring(L, "__jit_funcid");
-    lua_pushinteger(L, fun_id + 1);
+    lua_pushinteger(L, fun_id);
     lua_settable(L, LUA_REGISTRYINDEX);
     return fun_id;
 }
@@ -147,11 +148,11 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 break;
             }
             case OP_POW: {
-                parse_op_arithf(func_id, pc, buf, "^", A, B, C);
+                parse_op_arithf(func_id, pc, buf, '^', A, B, C);
                 break;
             }
             case OP_DIV: {
-                parse_op_arithf(func_id, pc, buf, "/", A, B, C);
+                parse_op_arithf(func_id, pc, buf, '/', A, B, C);
                 break;
             }
             case OP_IDIV: {
@@ -226,7 +227,7 @@ lua_CFunction create_clua_func_from_lua(lua_State *L, LClosure *cl)
         return NULL;
     }
     const char *code = membuf_to_string(&buff);
-    printf("%s\n", code);
+    // printf("%s\n", code);
     return create_clua_func_from_c(L, fname, code);
     
 

@@ -45,13 +45,16 @@ local import_func_h = {
     "ltm.h",
 }
 for _, h in ipairs(import_func_h) do
-    gen_import_func("lua/" .. h)
+    gen_import_func("lua-src/" .. h)
 end
 
 table.insert(export_func_list, 'malloc')
 table.insert(export_func_list, 'free')
 table.insert(export_func_list, 'printf')
 table.insert(export_func_list, 'memcpy')
+table.insert(export_func_list, 'fmod')
+table.insert(export_func_list, 'pow')
+table.insert(export_func_list, 'floor')
 
 table.sort(export_func_list)
 
@@ -82,6 +85,7 @@ end
 
 writeln(generate_c_file, '#include "string.h"')
 writeln(generate_c_file, '#include "stdlib.h"')
+writeln(generate_c_file, '#include "math.h"')
 writeln(generate_c_file, 'typedef struct {')
 inc_tabnum()
 writeln(generate_c_file, 'const char *name;')
