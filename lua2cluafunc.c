@@ -122,6 +122,16 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
     MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
     MCF("    CallInfo *ci = L->ci;\n");
     MCF("    StkId base = ci->func + 1;\n");
+
+//  CClosure *func = clCvalue(s2v(ci->func));
+//       return (idx <= func->nupvalues) ? &func->upvalue[idx-1]
+//                                       : &G(L)->nilvalue;
+
+
+    MCF("     CClosure *func = clCvalue(s2v(ci->func));\n");
+    MCF("     LClosure *or_func = clLvalue(func->upvalue);\n");
+    MCF("     TValue *k = or_func->p->k;\n");
+    TValue *k = cl->p->k;
     for(int pc = 0; pc < cl->p->sizecode; ++pc)
     {
         const Instruction i = cl->p->code[pc];
@@ -131,6 +141,24 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
         int C = GETARG_C(i);
         MCF("__jitfunc%d_op%d: \n", func_id, pc);
         switch(op) {
+            case OP_LOADI: {
+                MCF("{\n");
+                MCF("lua_Integer b = %d;\n", GETARG_sBx(i));
+                MCF("setivalue(s2v(base+%d), b);\n", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_LOADF: {
+                MCF("{\n");
+                MCF("int b = %d;\n", GETARG_sBx(i));
+                MCF("setfltvalue(s2v(base+%d), cast_num(b));\n", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_LOADK: {
+                parse_op_loadk(buf, A, GETARG_Bx(i), k);
+                break;
+            }
             case OP_ADD: {
                 parse_op_arith(func_id, pc, buf, '+', A, B, C);
                 break;

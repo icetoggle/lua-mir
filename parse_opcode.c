@@ -1,5 +1,6 @@
 #include "parse_opcode.h"
 
+
 const char *arithi_opcode(char op) 
 {
     static char buf[64];
@@ -86,5 +87,37 @@ void parse_op_arithf(int func_id, int pc_idx, Membuf *buf, char op, int A, int B
     MCF("    setfltvalue(s2v(base + %d), %s);\n", A, arithf_opcode(op));
     MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
     MCF("}\n");
+    MCF("}\n");
+}
+
+
+void parse_op_loadk(Membuf *buf, int A, int bx, TValue *k)
+{
+    TValue* b = k + bx;
+    MCF("{\n");
+    switch (b->tt_)
+    {
+    case LUA_VNUMINT: {
+        MCF("setivalue(s2v(base + %d), %lld);\n", A, b->value_.i);
+        break;
+    }
+    case LUA_VNUMFLT: {
+        MCF("setfltvalue(s2v(base + %d), %f);\n", A, b->value_.n);
+        break;
+    }
+    case LUA_VFALSE: {
+        MCF("setbtvalue(s2v(base + %d));\n", A);
+        break;
+    }
+    case LUA_VTRUE: {
+        MCF("setbfvalue(s2v(base + %d));\n", A);
+        break;
+    }
+    default:
+    {
+        MCF("setobj2s(L, base + %d, k + %d);\n", A, bx);
+        break;
+    }
+    }
     MCF("}\n");
 }

@@ -41,7 +41,8 @@ static int l_ljit(lua_State *L)
     if(func == NULL) {
         return 0;
     }
-    lua_pushcfunction(L, func);
+    lua_pushcclosure(L, func, 1);
+    //lua_pushcfunction(L, func);
     return 1;
 }
 

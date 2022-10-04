@@ -22,6 +22,7 @@
         "llimits.h": "c",
         "ltm.h": "c",
         "lundump.h": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "parse_opcode.h": "c"
     }
 }
