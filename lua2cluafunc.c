@@ -159,6 +159,49 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 parse_op_loadk(buf, A, GETARG_Bx(i), k);
                 break;
             }
+            case OP_LOADKX: {
+                parse_op_loadk(buf, A, GETARG_Ax(cl->p->code[++pc]), k);
+                break;
+            }
+            case OP_LOADFALSE: {
+                MCF("setbfvalue(s2v(base+%d));\n", A);
+                break;
+            }
+            case OP_LFALSESKIP: {
+                MCF("setbfvalue(s2v(base+%d));\n", A);
+                ++pc;
+                break;
+            }
+            case OP_LOADTRUE: {
+                MCF("setbtvalue(s2v(base+%d));\n", A);
+                break;
+            }
+            case OP_LOADNIL: {
+                MCF("{\n");
+                MCF("int ra = %d;\n", A);
+                MCF("int b = %d;\n", B);
+                MCF("do {\n");
+                MCF("setnilvalue(s2v(base+ra++));\n" );
+                MCF("} while(b--);\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_GETUPVAL: {
+                MCF("{\n");
+                MCF("int b = %d;\n", B);
+                MCF("setobj2s(L, base+%d, or_func->upvals[b]->v);\n", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_SETUPVAL: {
+                MCF("{\n");
+                MCF("int b = %d;\n", B);
+                MCF("UpVal *uv = or_func->upvals[b];\n");
+                MCF("setobj(L, uv->v, s2v(base+%d));\n", A);
+                MCF("luaC_barrier(L, uv, s2v(base+%d));", A);
+                MCF("}\n");
+                break;
+            }
             case OP_ADD: {
                 parse_op_arith(func_id, pc, buf, '+', A, B, C);
                 break;

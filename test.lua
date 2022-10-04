@@ -36,6 +36,33 @@ local function test2(a, b)
     return d
 end
 
+local function test_false()
+    local c = true
+    return c
+end
+
+local s = "test"
+
+local function test_nil()
+    local a = 1
+    local b = 2
+    local c = 3
+    local d = 4
+    return c
+end
+
+local function test_up(a, b)
+    local c = s
+    return c
+end
+
+local function test_setup(a, b)
+    s = "test2"
+    local c = s
+    return c
+end
+
+
 local luamir = require 'luamir'
 print("add", luamir.ljit(add)(1,2));
 print("sub", luamir.ljit(sub)(1,2));
@@ -45,6 +72,9 @@ print("div", luamir.ljit(div)(1,2));
 print("divv", luamir.ljit(divv)(1,2));
 print("pow", luamir.ljit(pow)(1,2));
 print("test1", luamir.ljit(test1)(1,2));
-print(luamir.lua2c(test2))
 print("test2", luamir.ljit(test2)(1,2));
+print("test_false", luamir.ljit(test_false)(1,2));
+print("testnil", luamir.ljit(test_nil)());
+print("test_up", luamir.ljit(test_up)());
+print("test_setup", luamir.ljit(test_setup)());
 add(1, 2)
