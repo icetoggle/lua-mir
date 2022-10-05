@@ -11,7 +11,7 @@ local function gen_import_func(path)
         -- %((%w+)%) %(lua_State%* L.*%);
         local func = string.match(line, 'LUALIB_API[%w_%s*]+%(([a-zA-z_]+)%) %(.*')
         if not func then
-            func = string.match(line, 'LUAI_FUNC [%w_%s*]+ ([a-zA-z_]+) %(.*')
+            func = string.match(line, 'LUAI_FUNC [%w_%s*]+ %*?([a-zA-z_]+) %(.*')
         end
         if not func then
             func = string.match(line, 'LUA_API [%w_]+ %(([a-zA-z_]+)%) %(.*')
@@ -129,6 +129,14 @@ writeln(generate_c_file, '}')
 writeln(generate_c_file, "printf(\"import_luacfun_resolver: %s not found\\n\", name);");
 dec_tabnum()
 writeln(generate_c_file, '}')
+
+writeln(generate_c_file, 'static const char* header_list[] = {')
+inc_tabnum();
+for _, h in ipairs(import_func_h) do
+    writeln(generate_c_file, '"'.. h .. '",')
+end
+dec_tabnum()
+writeln(generate_c_file, '};')
 generate_c_file:close()
 
 

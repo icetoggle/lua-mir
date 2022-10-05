@@ -8,6 +8,8 @@
 #include "c2cluafunc.h"
 #include "parse_opcode.h"
 #include <assert.h>
+#include "testfunc.h"
+#include "lua_std_cfunc.h"
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
 
 static TValue *index2value (lua_State *L, int idx) {
@@ -107,16 +109,10 @@ static int get_jit_funcid(lua_State *L)
 
 bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
 {
-    MCF("#include <lua.h>\n");
-    MCF("#include <lauxlib.h>\n");
-    MCF("#include <lualib.h>\n");
-    MCF("#include <lobject.h>\n");
-    MCF("#include <lstate.h>\n");
-    MCF("#include <lgc.h>\n");
-    MCF("#include <luaconf.h>\n");
-    MCF("#include <lapi.h>\n");
-    MCF("#include <llimits.h>\n");
-    MCF("#include <lvm.h>\n");
+    for(size_t i = 0; i < LUA_HEADER_LIST_SIZE; i++) {
+        MCF("#include \"%s\"\n", lua_header_list[i]);
+    }
+    MCF("#include \"lapi.h\"\n");
     MCF("#define savestate(L,ci)		(L->top = ci->top)\n");
     MCF("#define Protect(exp)  (savestate(L,ci), (exp))\n");
     MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
@@ -199,6 +195,22 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("UpVal *uv = or_func->upvals[b];\n");
                 MCF("setobj(L, uv->v, s2v(base+%d));\n", A);
                 MCF("luaC_barrier(L, uv, s2v(base+%d));", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_GETTABUP: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("int b = %d;\n", B);
+                MCF("int c = %d;\n", C);
+                MCF("TValue *upval = or_func->upvals[b]->v;\n");
+                MCF("TValue *rc = k+c;\n");
+                MCF("TString *key = tsvalue(rc);\n");
+                MCF("if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {\n");
+                MCF("   setobj2s(L,  base+%d, slot);\n", A);
+                MCF("} else {\n");
+                MCF("   luaV_finishget(L, upval, rc,  base+%d, slot);\n", A);
+                MCF("}\n");
                 MCF("}\n");
                 break;
             }
@@ -300,6 +312,6 @@ lua_CFunction create_clua_func_from_lua(lua_State *L, LClosure *cl)
     const char *code = membuf_to_string(&buff);
     // printf("%s\n", code);
     return create_clua_func_from_c(L, fname, code);
-    
+    // return create_test_func(L);
 
 }

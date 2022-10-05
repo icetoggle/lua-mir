@@ -23,6 +23,8 @@
         "ltm.h": "c",
         "lundump.h": "c",
         "cmath": "c",
-        "parse_opcode.h": "c"
+        "parse_opcode.h": "c",
+        "ldo.h": "c",
+        "lopcodes.h": "c"
     }
 }

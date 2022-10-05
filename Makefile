@@ -3,13 +3,13 @@ CFLAGS := -Wall -std=gnu11 -g -fPIC -O2
 LIBPATH := -L./
 INCLUDE := -I./mir/ -I./lua-src/
 
-all: test_mir luamir.so luacmatrix.so testadd.so
+all: test_mir luamir.so luacmatrix.so
 
 test_mir: test_mir.o libmir.a
 	$(CC) $(CFLAGS) -o test_mir test_mir.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
 
-luamir.so: c2cluafunc.o lua-mir.o libmir.a liblua.a lua_std_cfunc.o mir_utils.o lua2cluafunc.o membuf.o parse_opcode.o
-	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2cluafunc.o lua2cluafunc.o lua_std_cfunc.o mir_utils.o membuf.o parse_opcode.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
+luamir.so: c2cluafunc.o lua-mir.o libmir.a liblua.a lua_std_cfunc.o mir_utils.o lua2cluafunc.o membuf.o parse_opcode.o testfunc.o
+	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2cluafunc.o lua2cluafunc.o lua_std_cfunc.o mir_utils.o membuf.o parse_opcode.o testfunc.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
 
 luacmatrix.so: luacmatrix.o
 	$(CC) $(CFLAGS) -shared -o luacmatrix.so luacmatrix.o
@@ -47,14 +47,11 @@ lua2cluafunc.o: lua2cluafunc.c lua2cluafunc.h
 membuf.o: membuf.c membuf.h
 	$(CC) $(CFLAGS) -c membuf.c $(INCLUDE)
 
-testadd.so: testadd.o
-	$(CC) $(CFLAGS) -shared -o testadd.so testadd.o $(LIBPATH) -llua
-
-testadd.o: testadd.c
-	$(CC) $(CFLAGS) -c testadd.c $(INCLUDE)
-
 parse_opcode.o: parse_opcode.c
 	$(CC) $(CFLAGS) -c parse_opcode.c $(INCLUDE)
+
+testfunc.o: testfunc.c
+	$(CC) $(CFLAGS) -c testfunc.c $(INCLUDE)
 
 
 .PHONE: clean

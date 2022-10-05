@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/lua/lua",
+            "program": "${workspaceFolder}/lua",
             "args": ["./test.lua"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -28,7 +28,8 @@
                 }
             ],
             "sourceFileMap": {
-                "${workspaceFolder}/lua": "./",
+                "ltable.c": "${workspaceFolder}/lua-src/ltable.c",
+                "${workspaceFolder}/mir": "./",
             }
         }
 
