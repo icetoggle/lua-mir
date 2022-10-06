@@ -214,6 +214,53 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
+            case OP_GETTABLE: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("TValue *rb = s2v(base+%d);\n", B);
+                MCF("TValue *rc = s2v(base+%d);\n", C);
+                MCF("lua_Unsigned n;\n");
+                MCF("if (ttisnil(rbv)) {\n");
+                MCF("   luaG_typeerror(L, rbv, \"index\");\n");
+                MCF("}\n");
+                MCF("if (ttisinteger(rc)  /* fast track for integers? */");
+                MCF("    ? (cast_void(n = ivalue(rc)), luaV_fastgeti(L, rb, n, slot))\n");
+                MCF("    : luaV_fastget(L, rb, rc, slot, luaH_get)) {\n");
+                MCF("   setobj2s(L, ra, slot);\n");
+                MCF("} else {\n");
+                MCF("   luaV_finishget(L, rbv, rcv,  base+ra, slot);\n");
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_GETI: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("TValue *rb = s2v(base+%d);\n", B);
+                MCF("if (luaV_fastgeti(L, rb, %d, slot)) {\n", C);
+                MCF("   setobj2s(L, base+%d, slot);\n", A);
+                MCF("} else {\n");
+                MCF("   TValue key;\n");
+                MCF("   setivalue(&key, %d);\n", C);
+                MCF("   luaV_finishget(L, rb, &key,  base+%d, slot);\n", A);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_GETFIELD: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("TValue *rb = s2v(base+%d);\n", B);
+                MCF("TValue *rc = k+%d;\n", C);
+                MCF("TString *key =tsvalue(rc);\n");
+                MCF("if (luaV_fastget(L, rb, key, slot, luaH_getshortstr)) {\n");
+                MCF("   setobj2s(L, base+%d, slot);\n", A);
+                MCF("} else {\n");
+                MCF("   luaV_finishget(L, rb, rc,  base+%d, slot);\n", A);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
             case OP_ADD: {
                 parse_op_arith(func_id, pc, buf, '+', A, B, C);
                 break;
