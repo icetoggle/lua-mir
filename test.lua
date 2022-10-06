@@ -79,20 +79,71 @@ local function test_getfield(t)
     return c
 end
 
+local function test_gettable(t)
+    local a = 'a' 
+    local c = t[a]
+    return c
+end
+
+local function test_SETTABLEUP()
+    t[1] = 2
+    return t[1]
+end
+
+local function test_settable()
+    local c = 1
+    t[c] = 2
+    return t[c]
+end
+
+local function test_setfield(t)
+    t.a  = 3
+    return t.a
+end
+
+local function test_newtable()
+    local t = {}
+    t[1] = 12333
+    return t[1]
+end
+
+function t:test_self()
+    local r = self:test_self2()
+    return r
+end
+
+function t:test_self2()
+    return 2
+end
+
+function test_addi(a)
+    local c = a + 1
+    return c
+end
 local luamir = require 'luamir'
-print("add", luamir.ljit(add)(1,2));
-print("sub", luamir.ljit(sub)(1,2));
-print("mul", luamir.ljit(mul)(1,2));
-print("mod", luamir.ljit(mod)(1,2));
-print("div", luamir.ljit(div)(1,2));
-print("divv", luamir.ljit(divv)(1,2));
-print("pow", luamir.ljit(pow)(1,2));
-print("test1", luamir.ljit(test1)(1,2));
-print("test2", luamir.ljit(test2)(1,2));
-print("test_false", luamir.ljit(test_false)(1,2));
-print("testnil", luamir.ljit(test_nil)());
-print("test_up", luamir.ljit(test_up)());
-print("test_setup", luamir.ljit(test_setup)());
-print("test_tup", luamir.ljit(test_tup)());
-print("test_geti", luamir.ljit(test_geti)(t));
-print("test_getfield", luamir.ljit(test_getfield)(t));
+print("add", luamir.ljit(add)(1,2) == 3);
+print("sub", luamir.ljit(sub)(1,2) == -1);
+print("mul", luamir.ljit(mul)(1,2) == 2);
+print("mod", luamir.ljit(mod)(1,2) == 1);
+print("div", luamir.ljit(div)(1,2) == 0.5);
+print("divv", luamir.ljit(divv)(1,2) == 0);
+print("pow", luamir.ljit(pow)(1,2) == 1.0);
+print("test1", luamir.ljit(test1)(1,2) == 4);
+print("test2", luamir.ljit(test2)(1,2) == "111111111111");
+print("test_false", luamir.ljit(test_false)(1,2) == true);
+print("testnil", luamir.ljit(test_nil)() == 3);
+print("test_up", luamir.ljit(test_up)() == "test");
+print("test_setup", luamir.ljit(test_setup)() == "test2");
+print("test_tup", luamir.ljit(test_tup)() == 1);
+print("test_geti", luamir.ljit(test_geti)(t) == 2);
+print("test_getfield", luamir.ljit(test_getfield)(t) == 1);
+print("test_gettable", luamir.ljit(test_gettable)(t) == 1);
+print("test_SETTABLEUP", luamir.ljit(test_SETTABLEUP)() == 2);
+print("test_settable", luamir.ljit(test_settable)() == 2);
+print("test_setfield", luamir.ljit(test_setfield)(t) == 3);
+print("test_newtable", luamir.ljit(test_newtable)(t) == 12333);
+print("test_self", luamir.ljit(t.test_self)(t) == 2);
+print("test_addi", luamir.ljit(test_addi)(1) == 2);
+local a = {x = 1, y = 2}
+setmetatable(a, {__add = function(t, a) return {x = t.x + a, y = t.y + a} end})
+print("test_addi_metatable", luamir.ljit(test_addi)(a).x == 2 and luamir.ljit(test_addi)(a).y == 3);

@@ -10,6 +10,7 @@
 #include <assert.h>
 #include "testfunc.h"
 #include "lua_std_cfunc.h"
+#include <lopnames.h>
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
 
 static TValue *index2value (lua_State *L, int idx) {
@@ -106,6 +107,12 @@ static int get_jit_funcid(lua_State *L)
 #define RKC(i)	((TESTARG_k(i)) ? k + GETARG_C(i) : s2v(base + GETARG_C(i)))
 
 
+#define GEN_RKC(i) int testk = TESTARG_k(i);\
+                if(testk) { \
+                    MCF("TValue *rc = k + %d;\n", C); \
+                } else { \
+                    MCF("TValue *rc = s2v(base+%d);\n", C); \
+                }
 
 bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
 {
@@ -118,6 +125,9 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
     MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
     MCF("    CallInfo *ci = L->ci;\n");
     MCF("    StkId base = ci->func + 1;\n");
+    MCF("    for(StkId skd = L->top; skd <= base; ++skd) {\n");
+    MCF("       setnilvalue(s2v(skd));\n");
+    MCF("    }\n");
 
 //  CClosure *func = clCvalue(s2v(ci->func));
 //       return (idx <= func->nupvalues) ? &func->upvalue[idx-1]
@@ -136,7 +146,14 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
         int B = GETARG_B(i);
         int C = GETARG_C(i);
         MCF("__jitfunc%d_op%d: \n", func_id, pc);
+        MCF("//opcode is : %-9s\n", opnames[op]);
         switch(op) {
+            case OP_MOVE: {
+                MCF("{\n");
+                MCF("setobjs2s(L, base + %d, base + %d);\n", A, B);
+                MCF("}\n");
+                break;
+            }
             case OP_LOADI: {
                 MCF("{\n");
                 MCF("lua_Integer b = %d;\n", GETARG_sBx(i));
@@ -220,15 +237,12 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("TValue *rb = s2v(base+%d);\n", B);
                 MCF("TValue *rc = s2v(base+%d);\n", C);
                 MCF("lua_Unsigned n;\n");
-                MCF("if (ttisnil(rbv)) {\n");
-                MCF("   luaG_typeerror(L, rbv, \"index\");\n");
-                MCF("}\n");
-                MCF("if (ttisinteger(rc)  /* fast track for integers? */");
+                MCF("if (ttisinteger(rc)  /* fast track for integers? */\n");
                 MCF("    ? (cast_void(n = ivalue(rc)), luaV_fastgeti(L, rb, n, slot))\n");
                 MCF("    : luaV_fastget(L, rb, rc, slot, luaH_get)) {\n");
-                MCF("   setobj2s(L, ra, slot);\n");
+                MCF("   setobj2s(L, base + %d, slot);\n", A);
                 MCF("} else {\n");
-                MCF("   luaV_finishget(L, rbv, rcv,  base+ra, slot);\n");
+                MCF("   luaV_finishget(L, rb, rc,  base+%d, slot);\n", A);
                 MCF("}\n");
                 MCF("}\n");
                 break;
@@ -259,6 +273,109 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("   luaV_finishget(L, rb, rc,  base+%d, slot);\n", A);
                 MCF("}\n");
                 MCF("}\n");
+                break;
+            }
+            case OP_SETTABUP: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("TValue *upval = or_func->->upvals[%d]->v;", A);
+                MCF("TValue *rb = k + %d;\n", B);
+                MCF("TValue *rc = k + %d;\n", C);
+                MCF("TString *key = tsvalue(rb);\n");
+                MCF("if (luaV_fastset(L, upval, key, slot, luaH_getshortstr)) {\n");
+                MCF("   luaV_finishfastset(L, upval, slot, rc);\n");
+                MCF("} else {\n");
+                MCF("   luaV_finishset(L, upval, rb, rc, slot);\n");
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_SETTABLE: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("TValue *rb = s2v(base + %d); \n", B);
+                GEN_RKC(i)
+                MCF("lua_Unsigned n;\n");
+                MCF("if (ttisinteger(rb)  /* fast track for integers? */\n");
+                MCF("    ? (cast_void(n = ivalue(rb)), luaV_fastgeti(L, s2v(base + %d), n, slot))\n", A);
+                MCF("    : luaV_fastget(L, s2v(base + %d), rb, slot, luaH_get)) {\n", A);
+                MCF("   luaV_finishfastset(L, s2v(base + %d), slot, rc);\n", A);
+                MCF("} else {\n");
+                MCF("   luaV_finishset(L, s2v(base + %d), rb, rc, slot);\n");
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_SETI: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("int c = %d;\n", B);
+                GEN_RKC(i)
+                MCF("if (luaV_fastgeti(L, s2v(base+%d), c, slot)) {\n", A);
+                MCF("   luaV_finishfastset(L, s2v(base+%d), slot, rc);\n", A);
+                MCF("} else {\n");
+                MCF("   TValue key;\n");
+                MCF("   setivalue(&key, c);\n");
+                MCF("   luaV_finishset(L, s2v(base+%d), &key, rc, slot);\n", A);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_SETFIELD: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("TValue *rb = k + %d;\n", B);
+                GEN_RKC(i)
+                MCF("TString *key = tsvalue(rb);\n");
+                MCF("if (luaV_fastget(L, s2v(base+%d), key, slot, luaH_getshortstr)) {\n", A);
+                MCF("   luaV_finishfastset(L, s2v(base+%d), slot, rc);\n", A);
+                MCF("} else {\n");
+                MCF("   luaV_finishset(L, s2v(base+%d), rb, rc, slot);\n", A);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_NEWTABLE: {
+                MCF("{\n");
+                MCF("int b = %d;\n", B);
+                MCF("int c = %d;\n", C);
+                MCF("Table *t;\n");
+                MCF("if (b > 0)\n");
+                MCF("  b = 1 << (b - 1);  /* size is 2^(b - 1) */");
+                if(TESTARG_k(i))
+                    MCF("c += %d * (%d + 1);\n", GETARG_Ax(cl->p->code[i+1]), MAXARG_C);
+                MCF("L->top = base + %d + 1;    /* correct top in case of emergency GC */\n", A);
+                MCF("t = luaH_new(L);  /* memory allocation */\n");
+                MCF("sethvalue2s(L, base + %d, t);\n", A);
+                MCF("if (b != 0 || c != 0)\n");
+                MCF("  luaH_resize(L, t, c, b);  /* idem */\n");
+                MCF("luaC_checkGC(L);\n");
+                GEN_GOTO_OP(func_id, pc + 2);
+                ++pc;
+                MCF("}\n");
+                break;
+            }
+            case OP_SELF: {
+                MCF("{\n");
+                MCF("const TValue *slot;\n");
+                MCF("TValue *rb = s2v(base+%d);\n", B);
+                GEN_RKC(i)
+                MCF("TString *key = tsvalue(rc);\n");
+                MCF("setobj2s(L, base + %d + 1, rb);\n", A);
+                MCF("if (luaV_fastget(L, rb, key, slot, luaH_getstr)) {\n");
+                MCF("   setobj2s(L, base+%d, slot);\n", A);
+                MCF("} else {\n");
+                MCF("   luaV_finishget(L, rb, rc, base+%d, slot);\n", A);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_ADDI: {
+                parse_op_arithI(func_id, pc, buf, '+', A, B, GETARG_sC(i));
+                break;
+            }
+            case OP_ADDK: {
+                parse_op_arithK(func_id, pc, buf, '+', A, B, C);
                 break;
             }
             case OP_ADD: {
@@ -301,6 +418,28 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
+            case OP_MMBINI: {
+                Instruction pi = cl->p->code[pc - 1];
+                MCF("{\n");
+                MCF("int imm = %d;\n", GETARG_sB(i));
+                MCF("TMS tm = (TMS)%u;\n", C);
+                MCF("int flip = %u;\n", GETARG_k(i));
+                MCF("StkId result = base + %u;\n", GETARG_A(pi));
+                assert(OP_ADDI <= GET_OPCODE(pi) && GET_OPCODE(pi) <= OP_SHRI);
+                MCF("luaT_trybiniTM(L, s2v(base + %u), imm, flip, result, tm);\n", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_CALL: {
+                MCF("{\n");
+                MCF("int b = %d;\n", B);
+                MCF("int nresults = %d - 1;\n", C);
+                MCF("if (b != 0) L->top = (base + %d) + b;\n", A);
+                MCF("luaD_callnoyield(L, base + %d, nresults);\n", A);
+                MCF("adjustresults(L, nresults);\n");
+                MCF("}\n");
+                break;
+            }
             case OP_RETURN1: {
                 MCF("{\n");
                 MCF("setobjs2s(L, L->top, base + %u);\n", A);
@@ -310,8 +449,13 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
-            
+            case OP_RETURN0:
+            {
+                break;
+            }
             default:
+                printf("Unknown opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
+                assert(false);
                 break;
         }
     }

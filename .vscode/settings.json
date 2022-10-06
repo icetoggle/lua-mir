@@ -25,6 +25,8 @@
         "cmath": "c",
         "parse_opcode.h": "c",
         "ldo.h": "c",
-        "lopcodes.h": "c"
+        "lopcodes.h": "c",
+        "lmem.h": "c",
+        "membuf.h": "c"
     }
 }
