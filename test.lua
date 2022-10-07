@@ -178,6 +178,26 @@ end
 local function test_shr(a, b)
     return a << b
 end
+
+local function test_unm(a)
+    local c = -a
+    return c
+end
+
+local function test_not(a)
+    local c = not a
+    return c
+end
+
+local function test_len(a)
+    local c = #a
+    return c
+end
+
+local function test_concat(a, b)
+    local c = a .. b
+    return c
+end
 local luamir = require 'luamir'
 print("add", luamir.ljit(add)(1,2) == 3);
 print("sub", luamir.ljit(sub)(1,2) == -1);
@@ -226,3 +246,8 @@ print("test_bxor", luamir.ljit(test_bxor)(1, 2) == 3);
 -- print("test_shl", luamir.lua2c(test_shl));
 print("test_shl", luamir.ljit(test_shl)(1, 2) == 0);
 print("test_shr", luamir.ljit(test_shr)(1, 2) == 4);
+print("test_unm", luamir.ljit(test_unm)(1) == -1);
+print("test_not", luamir.ljit(test_not)(false) == true);
+print("test_len", luamir.ljit(test_len)({1,2,3}) == 3);
+
+print("test_concat", luamir.ljit(test_concat)("1", "2") == "12");

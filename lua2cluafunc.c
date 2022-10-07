@@ -508,6 +508,47 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
+            case OP_UNM: {
+                MCF("{\n");
+                MCF("TValue *rb = s2v(base + %u);\n", B);
+                MCF("lua_Number nb;\n");
+                MCF("if (ttisinteger(rb)) {\n");
+                MCF("  lua_Integer ib = ivalue(rb);\n");
+                MCF("  setivalue(s2v(base + %d), intop(-, 0, ib));\n", A);
+                MCF("}\n");
+                MCF("else if (tonumberns(rb, nb)) {");
+                MCF("  setfltvalue(s2v(base + %d), luai_numunm(L, nb));", A);
+                MCF("}");
+                MCF("else");
+                MCF("  luaT_trybinTM(L, rb, rb, base + %d, TM_UNM);", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_NOT: {
+                MCF("{\n");
+                MCF("TValue *rb = s2v(base + %u);\n", B);
+                MCF("if (l_isfalse(rb))\n");
+                MCF("  setbtvalue(s2v(base + %d));\n", A);
+                MCF("else");
+                MCF("  setbfvalue(s2v(base + %d));\n", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_LEN: {
+                MCF("{\n");
+                MCF("luaV_objlen(L, base + %d, s2v(base + %d));\n", A, B);
+                MCF("}\n");
+                break;
+            }
+            case OP_CONCAT: {
+                MCF("{\n");
+                MCF("int n = %d;", B);
+                MCF("L->top = base + %d + n;\n", A);
+                MCF("luaV_concat(L, n);\n");
+                MCF("luaC_checkGC(L);\n");
+                MCF("}\n");
+                break;
+            }
             case OP_CALL: {
                 MCF("{\n");
                 MCF("int b = %d;\n", B);
@@ -516,6 +557,11 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("luaD_callnoyield(L, base + %d, nresults);\n", A);
                 MCF("adjustresults(L, nresults);\n");
                 MCF("}\n");
+                break;
+            }
+            //Todo  test
+            case OP_CLOSE: {
+                MCF("luaF_close(L, base + %d, LUA_OK, 1);\n", A);
                 break;
             }
             case OP_RETURN1: {
