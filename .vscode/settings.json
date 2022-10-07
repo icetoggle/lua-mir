@@ -27,6 +27,7 @@
         "ldo.h": "c",
         "lopcodes.h": "c",
         "lmem.h": "c",
-        "membuf.h": "c"
+        "membuf.h": "c",
+        "math.h": "c"
     }
 }

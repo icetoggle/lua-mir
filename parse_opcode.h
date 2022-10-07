@@ -9,5 +9,9 @@ void parse_op_arithf(int func_id, int pc_idx, Membuf *mb, char op, int A, int B,
 
 void parse_op_arithI(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int imm);
 void parse_op_arithK(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
+void parse_op_arithKf(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
+void parse_op_bitwiseK(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
+
 void parse_op_loadk(Membuf *buf, int A, int bx, TValue *k);
+
 #endif

@@ -19,9 +19,6 @@ end
 local function pow(a, b)
     return a ^ b
 end
-local function add(a, b)
-    return a + b
-end
 
 local function test1(a, b)
     local c = a + b
@@ -120,6 +117,40 @@ function test_addi(a)
     local c = a + 1
     return c
 end
+
+function test_addk(a)
+    local c = a + 1000000000
+    return c
+end
+
+local function test_mulk(a)
+    return a * 1000000000
+end
+local function test_subk(a)
+    return a - 1000000000
+end
+local function test_divk(a)
+    return a / 1000000000
+end
+local function test_divvk(a)
+    return a // 1000000000
+end
+local function test_modk(a)
+    return a % 1000000000
+end
+local function test_powk(a)
+    return a ^ 8
+end
+local function test_bank(a)
+    return a & 3
+end
+local function test_bork(a)
+    return a | 2
+end
+local function test_bxork(a)
+    return a ~ 3
+end
+
 local luamir = require 'luamir'
 print("add", luamir.ljit(add)(1,2) == 3);
 print("sub", luamir.ljit(sub)(1,2) == -1);
@@ -127,7 +158,7 @@ print("mul", luamir.ljit(mul)(1,2) == 2);
 print("mod", luamir.ljit(mod)(1,2) == 1);
 print("div", luamir.ljit(div)(1,2) == 0.5);
 print("divv", luamir.ljit(divv)(1,2) == 0);
-print("pow", luamir.ljit(pow)(1,2) == 1.0);
+print("pow", luamir.ljit(pow)(1,10000) == 1);
 print("test1", luamir.ljit(test1)(1,2) == 4);
 print("test2", luamir.ljit(test2)(1,2) == "111111111111");
 print("test_false", luamir.ljit(test_false)(1,2) == true);
@@ -147,3 +178,18 @@ print("test_addi", luamir.ljit(test_addi)(1) == 2);
 local a = {x = 1, y = 2}
 setmetatable(a, {__add = function(t, a) return {x = t.x + a, y = t.y + a} end})
 print("test_addi_metatable", luamir.ljit(test_addi)(a).x == 2 and luamir.ljit(test_addi)(a).y == 3);
+print("test_addk", luamir.ljit(test_addk)(1) == 1000000001);
+print("test_addk", luamir.ljit(test_addk)(a).x == 1000000001 and luamir.ljit(test_addk)(a).y == 1000000002);
+
+print("test_subk", luamir.ljit(test_subk)(1) == -999999999);
+print("test_mulk", luamir.ljit(test_mulk)(1) == 1000000000);
+print("test_divk", luamir.ljit(test_divk)(1) == 1/1000000000);
+print("test_divvk", luamir.ljit(test_divvk)(1) == 0);
+print("test_modk", luamir.ljit(test_modk)(1) == 1);
+
+print("test_powk", luamir.ljit(test_powk)(2) == 256);
+print("test_bank", luamir.ljit(test_bank)(1) == 1);
+print("test_bork", luamir.ljit(test_bork)(1) == 3);
+print("test_bxork", luamir.ljit(test_bxork)(1) == 2);
+
+

@@ -116,10 +116,12 @@ static int get_jit_funcid(lua_State *L)
 
 bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
 {
+    MCF("#define LUA_LIB\n");
     for(size_t i = 0; i < LUA_HEADER_LIST_SIZE; i++) {
         MCF("#include \"%s\"\n", lua_header_list[i]);
     }
     MCF("#include \"lapi.h\"\n");
+    MCF("#include \"math.h\"\n");
     MCF("#define savestate(L,ci)		(L->top = ci->top)\n");
     MCF("#define Protect(exp)  (savestate(L,ci), (exp))\n");
     MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
@@ -378,6 +380,42 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 parse_op_arithK(func_id, pc, buf, '+', A, B, C);
                 break;
             }
+            case OP_SUBK: {
+                parse_op_arithK(func_id, pc, buf, '-', A, B, C);
+                break;
+            }
+            case OP_MULK: {
+                parse_op_arithK(func_id, pc, buf, '*', A, B, C);
+                break;
+            }
+            case OP_MODK: {
+                parse_op_arithK(func_id, pc, buf, '%', A, B, C);
+                break;
+            }
+            case OP_POWK: {
+                parse_op_arithKf(func_id, pc, buf, '^', A, B, C);
+                break;
+            }
+            case OP_DIVK: {
+                parse_op_arithKf(func_id, pc, buf, '/', A, B, C);
+                break;
+            }
+            case OP_IDIVK: {
+                parse_op_arithK(func_id, pc, buf, '\\', A, B, C);
+                break;
+            }
+            case OP_BANDK: {
+                parse_op_bitwiseK(func_id, pc, buf, '&', A, B, C);
+                break;
+            }
+            case OP_BORK: {
+                parse_op_bitwiseK(func_id, pc, buf, '|', A, B, C);
+                break;
+            }
+            case OP_BXORK: {
+                parse_op_bitwiseK(func_id, pc, buf, '^', A, B, C);
+                break;
+            }
             case OP_ADD: {
                 parse_op_arith(func_id, pc, buf, '+', A, B, C);
                 break;
@@ -427,6 +465,17 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("StkId result = base + %u;\n", GETARG_A(pi));
                 assert(OP_ADDI <= GET_OPCODE(pi) && GET_OPCODE(pi) <= OP_SHRI);
                 MCF("luaT_trybiniTM(L, s2v(base + %u), imm, flip, result, tm);\n", A);
+                MCF("}\n");
+                break;
+            }
+            case OP_MMBINK: {
+                Instruction pi = cl->p->code[pc - 1];
+                MCF("{\n");
+                MCF("TValue *imm = k + %d;\n", B);
+                MCF("TMS tm = (TMS)%d;\n", C);
+                MCF("int flip = %d;\n", GETARG_k(i));
+                MCF("StkId result = base + %d;\n", GETARG_A(pi));
+                MCF("luaT_trybinassocTM(L, s2v(base + %d), imm, flip, result, tm);\n", A);
                 MCF("}\n");
                 break;
             }

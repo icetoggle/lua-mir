@@ -7,7 +7,10 @@ const char *arithi_opcode(char op)
     switch(op) {
         case '+':
         case '-':
-        case '*': {
+        case '*': 
+        case '&':
+        case '|':
+        case '^':{
             sprintf(buf, "l_castU2S(l_castS2U(i1) %c l_castS2U(i2))", op);
             return buf;
         }
@@ -116,10 +119,58 @@ void parse_op_arithI(int func_id, int pc_idx, Membuf *buf, char op, int A, int B
     MCF("}\n");
 }
 
-void parse_op_arithK(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C)
+void parse_op_arithK(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
 {
-
+    MCF("{\n");
+    MCF("TValue *v1 = s2v(base + %d);\n", B);
+    MCF("TValue *v2 = k + %d;\n", C);
+    MCF("if(ttisinteger(v1) && ttisinteger(v2)) {\n");
+    MCF("    lua_Integer i1 = ivalue(v1);\n");
+    MCF("    lua_Integer i2 = ivalue(v2);\n");
+    MCF("    setivalue(s2v(base + %d), %s);\n", A, arithi_opcode(op));
+    // MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("} else {\n");
+    MCF("    lua_Number n1,n2;\n");
+    MCF("    if (tonumberns(v1, n1) && tonumberns(v2, n2)) {\n");
+    MCF("        setfltvalue(s2v(base + %d), %s);\n", A, arithf_opcode(op));
+    // MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("    }\n");
+    MCF("}\n");
+    MCF("}\n");
 }
+
+
+void parse_op_arithKf(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+{
+    MCF("{\n");
+    MCF("TValue *v1 = s2v(base + %d);\n", B);
+    MCF("TValue *v2 = k + %d;\n", C);
+    MCF("lua_Number n1,n2;\n");
+    MCF("if (tonumberns(v1, n1) && tonumberns(v2, n2)) {\n");
+    MCF("    setfltvalue(s2v(base + %d), %s);\n", A, arithf_opcode(op));
+    // MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("}\n");
+    MCF("}\n");
+}
+
+void parse_op_bitwiseK(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+{
+    MCF("{\n");
+    MCF("TValue *v1 = s2v(base + %d);\n", B);
+    MCF("TValue *v2 = k + %d;\n", C);
+    MCF("lua_Integer i1;\n");
+    MCF("lua_Integer i2 = ivalue(v2);\n");
+    MCF("if(tointegerns(v1, &i1)) {\n");
+    MCF("    setivalue(s2v(base + %d), %s);\n", A, arithi_opcode(op));
+    // MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("}\n");
+    MCF("}\n");
+}
+
 
 void parse_op_loadk(Membuf *buf, int A, int bx, TValue *k)
 {
