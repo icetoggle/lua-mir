@@ -151,6 +151,14 @@ local function test_bxork(a)
     return a ~ 3
 end
 
+local function test_shl(a)
+    return a >> 1
+end
+
+local function test_shr(a)
+    return a << 1
+end
+
 local luamir = require 'luamir'
 print("add", luamir.ljit(add)(1,2) == 3);
 print("sub", luamir.ljit(sub)(1,2) == -1);
@@ -191,5 +199,6 @@ print("test_powk", luamir.ljit(test_powk)(2) == 256);
 print("test_bank", luamir.ljit(test_bank)(1) == 1);
 print("test_bork", luamir.ljit(test_bork)(1) == 3);
 print("test_bxork", luamir.ljit(test_bxork)(1) == 2);
-
+print("test_shl", luamir.ljit(test_shl)(1) == 0);
+print("test_shr", luamir.ljit(test_shr)(1) == 2);
 

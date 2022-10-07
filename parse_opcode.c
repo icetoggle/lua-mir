@@ -171,6 +171,25 @@ void parse_op_bitwiseK(int func_id, int pc_idx, Membuf *buf, char op, int A, int
     MCF("}\n");
 }
 
+void parse_op_shiftI(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int ic)
+{
+    MCF("{\n");
+    MCF("TValue *rb = s2v(base + %d);\n", B);
+    MCF("lua_Integer ib;\n");
+    MCF("if(tointegerns(rb, &ib)) {\n");
+    if(op == '>')
+    {
+        MCF("    setivalue(s2v(base + %d), luaV_shiftl(ib, -(%d)));\n", A, ic);
+    }
+    else if(op == '<')
+    {
+        MCF("    setivalue(s2v(base + %d), luaV_shiftl((%d), ib));\n", A, ic);
+    }
+    // MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("}\n");
+    MCF("}\n");
+}
 
 void parse_op_loadk(Membuf *buf, int A, int bx, TValue *k)
 {

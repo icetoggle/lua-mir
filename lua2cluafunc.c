@@ -416,6 +416,14 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 parse_op_bitwiseK(func_id, pc, buf, '^', A, B, C);
                 break;
             }
+            case OP_SHRI: {
+                parse_op_shiftI(func_id, pc, buf, '>', A, B, GETARG_sC(i));
+                break;
+            }
+            case OP_SHLI: {
+                parse_op_shiftI(func_id, pc, buf, '<', A, B, GETARG_sC(i));
+                break;
+            }
             case OP_ADD: {
                 parse_op_arith(func_id, pc, buf, '+', A, B, C);
                 break;
