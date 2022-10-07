@@ -159,6 +159,25 @@ local function test_shr(a)
     return a << 1
 end
 
+local function test_band(a, b)
+    return a & b
+end
+
+local function test_bor(a, b)
+    return a | b
+end
+
+local function test_bxor(a, b)
+    return a ~ b
+end
+
+local function test_shl(a, b)
+    return a >> b
+end
+
+local function test_shr(a, b)
+    return a << b
+end
 local luamir = require 'luamir'
 print("add", luamir.ljit(add)(1,2) == 3);
 print("sub", luamir.ljit(sub)(1,2) == -1);
@@ -199,6 +218,11 @@ print("test_powk", luamir.ljit(test_powk)(2) == 256);
 print("test_bank", luamir.ljit(test_bank)(1) == 1);
 print("test_bork", luamir.ljit(test_bork)(1) == 3);
 print("test_bxork", luamir.ljit(test_bxork)(1) == 2);
-print("test_shl", luamir.ljit(test_shl)(1) == 0);
-print("test_shr", luamir.ljit(test_shr)(1) == 2);
 
+print("test_band", luamir.ljit(test_band)(1, 2) == 0);
+print("test_bor", luamir.ljit(test_bor)(1, 2) == 3);
+print("test_bxor", luamir.ljit(test_bxor)(1, 2) == 3);
+
+-- print("test_shl", luamir.lua2c(test_shl));
+print("test_shl", luamir.ljit(test_shl)(1, 2) == 0);
+print("test_shr", luamir.ljit(test_shr)(1, 2) == 4);

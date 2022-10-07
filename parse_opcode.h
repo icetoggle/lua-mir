@@ -6,6 +6,7 @@
 #define GEN_GOTO_OP(func_id, pc_idx)    MCF("    goto __jitfunc%d_op%d;\n", (func_id), (pc_idx));
 void parse_op_arith(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
 void parse_op_arithf(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
+void parse_op_bitwise(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
 
 void parse_op_arithI(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int imm);
 void parse_op_arithK(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);

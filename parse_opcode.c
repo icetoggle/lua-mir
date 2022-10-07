@@ -22,6 +22,14 @@ const char *arithi_opcode(char op)
             sprintf(buf, "luaV_idiv(L, i1, i2)");
             return buf;
         }
+        case '>': {
+            sprintf(buf, "luaV_shiftl(i1, -i2)");
+            return buf;
+        }
+        case '<': {
+            sprintf(buf, "luaV_shiftl(i1, i2)");
+            return buf;
+        }
         default: return NULL;
     }
 }
@@ -92,6 +100,20 @@ void parse_op_arithf(int func_id, int pc_idx, Membuf *buf, char op, int A, int B
     MCF("lua_Number n1,n2;\n");
     MCF("if (tonumberns(v1, n1) && tonumberns(v2, n2)) {\n");
     MCF("    setfltvalue(s2v(base + %d), %s);\n", A, arithf_opcode(op));
+    // MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("}\n");
+    MCF("}\n");
+}
+
+void parse_op_bitwise(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+{
+    MCF("{\n");
+    MCF("TValue *v1 = s2v(base + %u);\n", B);
+    MCF("TValue *v2 = s2v(base + %u);\n", C);
+    MCF(" lua_Integer i1, i2;\n");
+    MCF("if(tointegerns(v1, &i1) && tointegerns(v2, &i2)) {\n");
+    MCF("    setivalue(s2v(base + %u), %s);\n", A, arithi_opcode(op));
     // MCF("    goto __jitfunc%d_op%d;\n", func_id, pc_idx + 2);
     GEN_GOTO_OP(func_id, pc_idx + 2);
     MCF("}\n");

@@ -452,6 +452,27 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 parse_op_arith(func_id, pc, buf, '\\', A, B, C);
                 break;
             }
+            case OP_BAND: {
+                parse_op_bitwise(func_id, pc, buf, '&', A, B, C);
+                break;
+            }
+            case OP_BOR: {
+                parse_op_bitwise(func_id, pc, buf, '|', A, B, C);
+                break;
+            }
+            case OP_BXOR: {
+                parse_op_bitwise(func_id, pc, buf, '^', A, B, C);
+                break;
+            }
+            case OP_SHR: {
+                parse_op_bitwise(func_id, pc, buf, '>', A, B, C);
+                break;
+            }
+            case OP_SHL: {
+                parse_op_bitwise(func_id, pc, buf, '<', A, B, C);
+                break;
+            }
+
             case OP_MMBIN: {
                 Instruction pi = cl->p->code[pc - 1];
                 MCF("{\n");
