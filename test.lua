@@ -198,6 +198,11 @@ local function test_concat(a, b)
     local c = a .. b
     return c
 end
+
+local function test_eq(a, b)
+    local c = a == b
+    return c
+end
 local luamir = require 'luamir'
 print("add", luamir.ljit(add)(1,2) == 3);
 print("sub", luamir.ljit(sub)(1,2) == -1);
@@ -251,3 +256,4 @@ print("test_not", luamir.ljit(test_not)(false) == true);
 print("test_len", luamir.ljit(test_len)({1,2,3}) == 3);
 
 print("test_concat", luamir.ljit(test_concat)("1", "2") == "12");
+print("test_eq", luamir.ljit(test_eq)(1, 1) == true);

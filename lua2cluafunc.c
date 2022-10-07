@@ -184,7 +184,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
             }
             case OP_LFALSESKIP: {
                 MCF("setbfvalue(s2v(base+%d));\n", A);
-                ++pc;
+                GEN_GOTO_OP(func_id, pc + 2);
                 break;
             }
             case OP_LOADTRUE: {
@@ -562,6 +562,28 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
             //Todo  test
             case OP_CLOSE: {
                 MCF("luaF_close(L, base + %d, LUA_OK, 1);\n", A);
+                break;
+            }
+            //Todo  test
+            case OP_TBC: {
+                MCF("luaF_newtbcupval(L, base + %d);\n", A);
+                break;
+            }
+            case OP_JMP: {
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(i) + 1);
+                break;
+            }
+            case OP_EQ: {
+                MCF("{\n");
+                MCF("int cond;\n");
+                MCF("TValue *rb = s2v(base + %d);\n", B);
+                MCF("cond = luaV_equalobj(L, s2v(base + %d), rb);\n", A);
+                MCF("if (cond != %d) {\n", GETARG_k(i));
+                GEN_GOTO_OP(func_id, pc + 2);
+                MCF("} else {\n");
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                MCF("}\n");
+                MCF("}\n");
                 break;
             }
             case OP_RETURN1: {
