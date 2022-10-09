@@ -120,6 +120,28 @@ void parse_op_bitwise(int func_id, int pc_idx, Membuf *buf, char op, int A, int 
     MCF("}\n");
 }
 
+
+void parse_op_order(int func_id, int pc_idx, Membuf *buf, int A, int B, int k, int next_sj, const char* opi, const char *opn, const char *other)
+{
+    MCF("{\n");
+    MCF("int cond;\n");
+    MCF("TValue *rb = s2v(base+%d));\n", B);
+    MCF("if (ttisinteger(s2v(base+%d)) && ttisinteger(rb)) {\n", A);
+    MCF("  lua_Integer ia = ivalue(s2v(base+%d));\n", A);
+    MCF("  lua_Integer ib = ivalue(rb);\n");
+    MCF("  cond = %s(ia,ib);\n", opi);
+    MCF("} else if (ttisnumber(s2v(base+%d)) && ttisnumber(rb)) {\n", A);
+    MCF("  cond = %s(s2v(base+%d), rb); \n", A, opn);
+    MCF("} else {\n");
+    MCF("  cond = %s(L, s2v(base+%d), rb);\n", A, other);
+    MCF("}\n");
+    MCF("if (cond != k)");
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("else \n");
+    GEN_GOTO_OP(func_id, pc_idx + next_sj + 2);
+    MCF("}\n");
+    MCF("}\n");
+}
 void parse_op_arithI(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int imm)
 {
     MCF("{\n");

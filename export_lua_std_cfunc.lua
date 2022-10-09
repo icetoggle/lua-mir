@@ -55,6 +55,9 @@ table.insert(export_func_list, 'memcpy')
 table.insert(export_func_list, 'fmod')
 table.insert(export_func_list, 'pow')
 table.insert(export_func_list, 'floor')
+table.insert(export_func_list, 'l_strcmp')
+table.insert(export_func_list, 'lessthanothers')
+table.insert(export_func_list, 'lessequalothers')
 
 table.sort(export_func_list)
 
@@ -86,6 +89,7 @@ end
 writeln(generate_c_file, '#include "string.h"')
 writeln(generate_c_file, '#include "stdlib.h"')
 writeln(generate_c_file, '#include "math.h"')
+writeln(generate_c_file, '#include "luavm_utils.h"')
 writeln(generate_c_file, 'typedef struct {')
 inc_tabnum()
 writeln(generate_c_file, 'const char *name;')
@@ -130,7 +134,7 @@ writeln(generate_c_file, "printf(\"import_luacfun_resolver: %s not found\\n\", n
 dec_tabnum()
 writeln(generate_c_file, '}')
 
-writeln(generate_c_file, 'static const char* header_list[] = {')
+writeln(generate_c_file, 'const char* lua_header_list[] = {')
 inc_tabnum();
 for _, h in ipairs(import_func_h) do
     writeln(generate_c_file, '"'.. h .. '",')

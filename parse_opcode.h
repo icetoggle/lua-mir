@@ -7,6 +7,7 @@
 void parse_op_arith(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
 void parse_op_arithf(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
 void parse_op_bitwise(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);
+void parse_op_order(int func_id, int pc_idx, Membuf *mb, int A, int B, int k, int next_sj, const char* opi, const char *opn, const char *other);
 
 void parse_op_arithI(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int imm);
 void parse_op_arithK(int func_id, int pc_idx, Membuf *mb, char op, int A, int B, int C);

@@ -586,6 +586,10 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
+            case OP_LT: {
+                parse_op_order(func_id, pc, buf, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "LTnum", "lessthanothers");
+                break;
+            }
             case OP_RETURN1: {
                 MCF("{\n");
                 MCF("setobjs2s(L, L->top, base + %u);\n", A);

@@ -8,8 +8,8 @@ all: test_mir luamir.so luacmatrix.so
 test_mir: test_mir.o libmir.a
 	$(CC) $(CFLAGS) -o test_mir test_mir.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
 
-luamir.so: c2cluafunc.o lua-mir.o libmir.a liblua.a lua_std_cfunc.o mir_utils.o lua2cluafunc.o membuf.o parse_opcode.o testfunc.o
-	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2cluafunc.o lua2cluafunc.o lua_std_cfunc.o mir_utils.o membuf.o parse_opcode.o testfunc.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
+luamir.so: c2cluafunc.o lua-mir.o libmir.a liblua.a lua_std_cfunc.o mir_utils.o lua2cluafunc.o membuf.o parse_opcode.o testfunc.o luavm_utils.o
+	$(CC) $(CFLAGS) -shared -o luamir.so lua-mir.o c2cluafunc.o lua2cluafunc.o lua_std_cfunc.o mir_utils.o membuf.o parse_opcode.o testfunc.o luavm_utils.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
 
 luacmatrix.so: luacmatrix.o
 	$(CC) $(CFLAGS) -shared -o luacmatrix.so luacmatrix.o
@@ -53,6 +53,8 @@ parse_opcode.o: parse_opcode.c
 testfunc.o: testfunc.c
 	$(CC) $(CFLAGS) -c testfunc.c $(INCLUDE)
 
+luavm_utils.o: luavm_utils.c luavm_utils.h
+	$(CC) $(CFLAGS) -c luavm_utils.c $(INCLUDE)
 
 .PHONE: clean
 clean:
