@@ -263,4 +263,13 @@ print("test_len", luamir.ljit(test_len)({1,2,3}) == 3);
 
 print("test_concat", luamir.ljit(test_concat)("1", "2") == "12");
 print("test_eq", luamir.ljit(test_eq)(1, 1) == true);
-print("test_lt", luamir.ljit(test_lt)(1, 2) == true);
+print("test_lt", luamir.lua2c(test_lt));
+print("test_lt", luamir.ljit(test_lt)(2, 1) == true);
+print("test_lt", luamir.ljit(test_lt)(1, 2.0) == true);
+print("test_lt", luamir.ljit(test_lt)(1.1, 2.1) == true);
+print("test_lt", luamir.ljit(test_lt)("bbbb", "bbbb"));
+local a = {x = 1, y = 2}
+local b = {x = 3, y = 3}
+setmetatable(a, {__lt = function(t, a) return t.x < a.x end})
+setmetatable(b, {__lt = function(t, a) return t.x < a.x end})
+print("test_lt", luamir.ljit(test_lt)(b, a) == true);

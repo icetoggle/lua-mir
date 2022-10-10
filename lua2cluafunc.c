@@ -122,6 +122,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
     }
     MCF("#include \"lapi.h\"\n");
     MCF("#include \"math.h\"\n");
+    MCF("#include \"luavm_utils.h\"\n");
     MCF("#define savestate(L,ci)		(L->top = ci->top)\n");
     MCF("#define Protect(exp)  (savestate(L,ci), (exp))\n");
     MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
