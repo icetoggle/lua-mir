@@ -560,6 +560,15 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
+            case OP_TAILCALL: {
+                MCF("{\n");
+                MCF("int b = %d;\n", B);
+                MCF("if (b != 0) L->top = (base + %d) + b;\n", A);
+                MCF("luaD_callnoyield(L, base + %d, LUA_MULTRET);\n", A);
+                MCF("}\n");
+                break;
+            }
+            
             //Todo  test
             case OP_CLOSE: {
                 MCF("luaF_close(L, base + %d, LUA_OK, 1);\n", A);
@@ -664,6 +673,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
+            case OP_RETURN:
             case OP_RETURN1: {
                 MCF("{\n");
                 MCF("setobjs2s(L, L->top, base + %u);\n", A);
@@ -677,6 +687,15 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
             {
                 break;
             }
+            //Todo
+            // case OP_RETURN: {
+            //     MCF("{\n");
+            //     MCF("setobjs2s(L, L->top, base + %u);\n", A);
+            //     MCF("L->top += %u;\n", B - 1);
+            //     MCF("luaC_checkGC(L);\n");
+            //     MCF("return 1;\n");
+            //     break;
+            // }
             default:
                 printf("Unknown opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
                 assert(false);

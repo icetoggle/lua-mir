@@ -368,4 +368,4 @@ print("test_testset", luamir.lua2c(test_testset));
 print("test_testset", luamir.ljit(test_testset)(1));
 print("test_testset", luamir.ljit(test_testset)(nil));
 print("test_testset", luamir.ljit(test_testset)(false));
--- print("test_tail", luamir.ljit(test_tail)(1) == 1);
+print("test_tail", luamir.ljit(test_tail)(1) == 1);
