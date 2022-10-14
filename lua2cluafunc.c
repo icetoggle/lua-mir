@@ -591,6 +591,79 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 parse_op_order(func_id, pc, buf, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "LTnum", "lessthanothers");
                 break;
             }
+            case OP_LE: {
+                parse_op_order(func_id, pc, buf, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "LEnum", "lessequalothers");
+                break;
+            }
+            case OP_EQK : {
+                MCF("{\n");
+                MCF("TValue *rb = k + %d;\n", B);
+                MCF("int cond = luaV_rawequalobj(s2v(base + %d), rb);\n", A);
+                MCF("if (cond != %d) {\n", GETARG_k(i));
+                GEN_GOTO_OP(func_id, pc + 2);
+                MCF("} else {\n");
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_EQI: {
+                MCF("{\n");
+                MCF("int cond;\n");
+                MCF("int im = %d;\n", GETARG_sB(i));
+                MCF("if (ttisinteger(s2v(base + %d)))\n", A);
+                MCF(" cond = (ivalue(s2v(base + %d)) == im);\n", A);
+                MCF("else if (ttisfloat(s2v(base + %d)))\n", A);
+                MCF(" cond = luai_numeq(fltvalue(s2v(base + %d)), cast_num(im));\n", A);
+                MCF("else\n");
+                MCF(" cond = 0;\n");
+                MCF("if (cond != %d) {\n", GETARG_k(i));
+                GEN_GOTO_OP(func_id, pc + 2);
+                MCF("} else {\n");
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_LTI: {
+                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "luai_numlt", "0", "TM_LT");
+                break;
+            }
+            case OP_LEI: {
+                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "luai_numle", "0", "TM_LE");
+                break;
+            }
+            case OP_GTI: {
+                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gti", "luai_numgt", "1", "TM_LT");
+                break;
+            }
+            case OP_GEI: {
+                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gei", "luai_numge", "1", "TM_LE");
+                break;
+            }
+            case OP_TEST: {
+                MCF("{\n");
+                MCF("int cond = !l_isfalse(s2v(base + %d));\n", A);
+                MCF("if (cond != %d) {\n", GETARG_k(i));
+                GEN_GOTO_OP(func_id, pc + 2);
+                MCF("} else {\n");
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_TESTSET: {
+                MCF("{\n");
+                MCF("TValue *rb = s2v(base + %d);\n", B);
+                MCF("if (l_isfalse(rb) == %d)\n {", GETARG_k(i));
+                GEN_GOTO_OP(func_id, pc + 2);
+                MCF("} else {\n");
+                MCF("  setobj2s(L, base + %d, rb);\n", A);
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
             case OP_RETURN1: {
                 MCF("{\n");
                 MCF("setobjs2s(L, L->top, base + %u);\n", A);

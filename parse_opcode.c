@@ -1,4 +1,5 @@
 #include "parse_opcode.h"
+#include "lopcodes.h"
 
 
 const char *arithi_opcode(char op) 
@@ -134,6 +135,28 @@ void parse_op_order(int func_id, int pc_idx, Membuf *buf, int A, int B, int k, i
     MCF("  cond = %s(s2v(base+%d), rb); \n", opn, A);
     MCF("} else {\n");
     MCF("  cond = %s(L, s2v(base+%d), rb);\n", other, A);
+    MCF("}\n");
+    MCF("if (cond != %d)\n", k);
+    GEN_GOTO_OP(func_id, pc_idx + 2);
+    MCF("else \n");
+    GEN_GOTO_OP(func_id, pc_idx + next_sj + 2);
+    MCF("}\n");
+}
+
+void parse_op_orderI(int func_id, int pc_idx, Membuf *buf, int A, int B, int C, int k, int next_sj, const char* opi, const char* opf, const char* inv, const char* tm)
+{
+    MCF("{\n");
+    MCF("int cond;\n");
+    MCF("int im = %d;\n", sC2int(B));
+    MCF("if (ttisinteger(s2v(base + %d))) \n", A);
+    MCF("  cond = %s(ivalue(s2v(base + %d)), im);\n", opi, A);
+    MCF("else if (ttisfloat(s2v(base + %d))) {\n", A);
+    MCF("  lua_Number fa = fltvalue(s2v(base + %d));\n", A);
+    MCF("  lua_Number fim = cast_num(im);\n", opi);
+    MCF("  cond = %s(fa, fim);\n", opf);
+    MCF("} else {\n");
+    MCF("  int isf = %d;\n", C);
+    MCF("  cond = luaT_callorderiTM(L, s2v(base + %d), im, %s, isf, %s);\n", A, inv, tm);
     MCF("}\n");
     MCF("if (cond != %d)\n", k);
     GEN_GOTO_OP(func_id, pc_idx + 2);
