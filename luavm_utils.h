@@ -173,3 +173,5 @@ int lessthanothers (lua_State *L, const TValue *l, const TValue *r);
 ** return 'l <= r' for non-numbers.
 */
 int lessequalothers (lua_State *L, const TValue *l, const TValue *r);
+
+int forprep (lua_State *L, StkId ra);

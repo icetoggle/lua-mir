@@ -29,6 +29,7 @@
         "lmem.h": "c",
         "membuf.h": "c",
         "math.h": "c",
-        "luavm_utils.h": "c"
+        "luavm_utils.h": "c",
+        "lvm.h": "c"
     }
 }

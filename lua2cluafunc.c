@@ -700,6 +700,13 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
+            case OP_FORPREP: {
+                MCF("{\n");
+                MCF("if (forprep(L, ra))");
+                MCF("}\n");
+                GEN_GOTO_OP(func_id, pc + GETARG_sBx(i));
+                break;
+            }
             default:
                 printf("Unknown opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
                 assert(false);

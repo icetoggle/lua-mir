@@ -283,6 +283,14 @@ local function test_mulret()
     return a, b, c, d
 end
 
+local function test_forloop()
+    local a = 1
+    for i = 1, 1000000000 do
+        a = a + 1
+    end
+    return a
+end
+
 
 
 local luamir = require 'luamir'
