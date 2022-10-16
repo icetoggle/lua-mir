@@ -275,6 +275,16 @@ local function  test_tail()
     return test_tail2()
 end
 
+local function test_mulret()
+    local a = 1
+    local b = 2
+    local c = 3
+    local d = 4
+    return a, b, c, d
+end
+
+
+
 local luamir = require 'luamir'
 -- print("add", luamir.ljit(add)(1,2) == 3);
 -- print("sub", luamir.ljit(sub)(1,2) == -1);
@@ -365,7 +375,9 @@ print("test_test", luamir.ljit(test_test)(false) == 1);
 print("test_test", luamir.ljit(test_test)(nil) == 1);
 print("test_test", luamir.ljit(test_test)(true) == 0);
 print("test_testset", luamir.lua2c(test_testset));
-print("test_testset", luamir.ljit(test_testset)(1));
-print("test_testset", luamir.ljit(test_testset)(nil));
-print("test_testset", luamir.ljit(test_testset)(false));
+print("test_testset", luamir.ljit(test_testset)(1) == 1);
+print("test_testset", luamir.ljit(test_testset)(nil) == nil);
+print("test_testset", luamir.ljit(test_testset)(false) == false);
 print("test_tail", luamir.ljit(test_tail)(1) == 1);
+local a, b, c, d = luamir.ljit(test_mulret)();
+print("test_mulret", a == 1, b == 2, c == 3, d == 4);

@@ -673,7 +673,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
-            case OP_RETURN:
+            // case OP_RETURN:
             case OP_RETURN1: {
                 MCF("{\n");
                 MCF("setobjs2s(L, L->top, base + %u);\n", A);
@@ -687,15 +687,19 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
             {
                 break;
             }
-            //Todo
-            // case OP_RETURN: {
-            //     MCF("{\n");
-            //     MCF("setobjs2s(L, L->top, base + %u);\n", A);
-            //     MCF("L->top += %u;\n", B - 1);
-            //     MCF("luaC_checkGC(L);\n");
-            //     MCF("return 1;\n");
-            //     break;
-            // }
+            case OP_RETURN: {
+                MCF("{\n");
+                MCF("int n = %d - 1;\n", B);
+                MCF("if (n < 0) \n");
+                MCF("  n = cast_int(L->top - (base + %d));\n", A);
+                MCF("for(int i = 0; i < n; ++i) {\n");
+                MCF("  setobj2s(L, L->top, base + %d + i);\n", A);
+                MCF("  api_incr_top(L);\n", A);
+                MCF("}\n");
+                MCF("return n;\n");
+                MCF("}\n");
+                break;
+            }
             default:
                 printf("Unknown opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
                 assert(false);
