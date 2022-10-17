@@ -175,3 +175,11 @@ int lessthanothers (lua_State *L, const TValue *l, const TValue *r);
 int lessequalothers (lua_State *L, const TValue *l, const TValue *r);
 
 int forprep (lua_State *L, StkId ra);
+
+int forlimit (lua_State *L, lua_Integer init, const TValue *lim,
+                                   lua_Integer *p, lua_Integer step);
+
+int floatforloop (StkId ra);
+
+void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
+                         StkId ra);

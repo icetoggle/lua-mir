@@ -58,6 +58,9 @@ table.insert(export_func_list, 'floor')
 table.insert(export_func_list, 'l_strcmp')
 table.insert(export_func_list, 'lessthanothers')
 table.insert(export_func_list, 'lessequalothers')
+table.insert(export_func_list, 'forprep')
+table.insert(export_func_list, 'floatforloop')
+table.insert(export_func_list, 'pushclosure')
 
 table.sort(export_func_list)
 

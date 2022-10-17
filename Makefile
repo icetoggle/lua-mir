@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -std=gnu11 -g -fPIC -O2
+CFLAGS := -Wall -std=gnu11 -g -fPIC -O2 -DLUA_LIB
 LIBPATH := -L./
 INCLUDE := -I./mir/ -I./lua-src/
 

@@ -344,7 +344,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("int c = %d;\n", C);
                 MCF("Table *t;\n");
                 MCF("if (b > 0)\n");
-                MCF("  b = 1 << (b - 1);  /* size is 2^(b - 1) */");
+                MCF("  b = 1 << (b - 1);  /* size is 2^(b - 1) */\n");
                 if(TESTARG_k(i))
                     MCF("c += %d * (%d + 1);\n", GETARG_Ax(cl->p->code[i+1]), MAXARG_C);
                 MCF("L->top = base + %d + 1;    /* correct top in case of emergency GC */\n", A);
@@ -700,13 +700,110 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("}\n");
                 break;
             }
-            case OP_FORPREP: {
+            case OP_FORLOOP: {
                 MCF("{\n");
-                MCF("if (forprep(L, ra))");
+                MCF("if (ttisinteger(s2v(base + %d + 2))) {  /* integer loop? */\n", A);
+                MCF("  lua_Unsigned count = l_castS2U(ivalue(s2v(base + %d + 1)));\n", A);
+                MCF("  if (count > 0) {  /* still more iterations? */\n");
+                MCF("    lua_Integer step = ivalue(s2v(base + %d + 2));\n", A);
+                MCF("    lua_Integer idx = ivalue(s2v(base + %d));  /* internal index */\n", A);
+                MCF("    chgivalue(s2v(base + %d + 1), count - 1);  /* update counter */\n", A);
+                MCF("    idx = intop(+, idx, step);  /* add step to index */\n");
+                MCF("    chgivalue(s2v(base + %d), idx);  /* update internal index */\n", A);
+                MCF("    setivalue(s2v(base + %d + 3), idx);  /* and control variable */\n", A);
+                GEN_GOTO_OP(func_id, pc - GETARG_Bx(i) + 1);
+                MCF("  }\n");
                 MCF("}\n");
-                GEN_GOTO_OP(func_id, pc + GETARG_sBx(i));
+                MCF("else if (floatforloop(base + %d))  /* float loop */\n", A);
+                GEN_GOTO_OP(func_id, pc - GETARG_Bx(i) + 1);
+                MCF("}\n");
                 break;
             }
+            case OP_FORPREP: {
+                MCF("{\n");
+                MCF("if (forprep(L, base + %d))\n", A);
+                GEN_GOTO_OP(func_id, pc + B + 2);
+                MCF("}\n");
+                break;
+            }
+            case OP_TFORPREP: {
+                MCF("{\n");
+                MCF("luaF_newtbcupval(L, base + %d + 3);\n", A);
+                int jmp_step = B;
+                GEN_GOTO_OP(func_id, pc + jmp_step + 2);
+                MCF("}\n");
+                break;
+            }
+            case OP_TFORCALL: {
+                MCF("{\n");
+                MCF("StkId ra = base + %d;\n", A);
+                MCF("memcpy(ra + 4, ra, 3 * sizeof(*ra));\n");
+                MCF("L->top = ra + 4 + 3;\n");
+                MCF("luaD_callnoyield(L, ra + 4, %d);\n", C);
+                MCF("}\n");
+                break;
+            }
+            case OP_TFORLOOP: {
+                MCF("{\n");
+                MCF("StkId ra = base + %d;\n", A);
+                MCF("if (!ttisnil(s2v(ra + 4))) {  /* continue loop? */\n");
+                MCF("  setobjs2s(L, ra + 2, ra + 4);  /* save control variable */\n");
+                GEN_GOTO_OP(func_id, pc - GETARG_Bx(i) + 1);
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_SETLIST: {
+                MCF("{\n");
+                MCF("int n = %d;\n", B);
+                MCF("unsigned int last = %d;\n", C);
+                MCF("Table *h = hvalue(s2v(base + %d));\n", A);
+                MCF("if (n == 0) \n");
+                MCF("  n = cast_int(L->top - (base + %d)) - 1;\n", A);
+                MCF("else\n");
+                MCF("  L->top = ci->top;\n");
+                MCF("last += n;\n");
+                if (TESTARG_k(i)) {
+                    MCF("last = %d * (MAXARG_C + 1);\n", GETARG_Ax(cl->p->code[pc + 1]));
+                }
+                MCF("if (last > luaH_realasize(h))  /* needs more space? */\n");
+                MCF("  luaH_resizearray(L, h, last);  /* preallocate it at once */");
+                MCF("for (; n > 0; n--) {\n");
+                MCF("  TValue *val = s2v(base + %d + n);\n", A);
+                MCF("  setobj2t(L, &h->array[last - 1], val);\n");
+                MCF("  last--;\n");
+                MCF("  luaC_barrierback(L, h, val);\n");
+                MCF("}\n");
+                MCF("}\n");
+                break;
+            }
+            case OP_CLOSURE: {
+                MCF("{\n");
+                MCF("Proto *p = or_func->p->p[%d];\n", GETARG_Bx(i));
+                MCF("pushclosure(L, p, or_func->upvals, base, base + %d);\n", A);
+                MCF("luaC_checkGC(L);\n");
+                MCF("}\n");
+                break;
+            }
+            // case OP_VARARG: {
+            //     MCF("{\n");
+            //     MCF("int n = %d - 1;  /* required results */\n", C);
+            //     MCF("luaT_getvarargs(L, ci, base + %d, n);\n", A);
+            //     MCF("}\n");
+            //     break;
+            // }
+            // case OP_VARARGPREP: {
+            //     MCF("{\n");
+            //     MCF("luaT_adjustvarargs(L, %d, ci, or_func->p);\n", A);
+            //     MCF("base = ci->func + 1;\n");
+            //     MCF("}\n");
+            //     break;
+            // }
+            case OP_VARARG:
+            case OP_VARARGPREP:
+                printf("Unsupported opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
+                assert(false);
+                break;
             default:
                 printf("Unknown opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
                 assert(false);
@@ -757,6 +854,6 @@ lua_CFunction create_clua_func_from_lua(lua_State *L, LClosure *cl)
     const char *code = membuf_to_string(&buff);
     // printf("%s\n", code);
     return create_clua_func_from_c(L, fname, code);
-    // return create_test_func(L);
+    //return create_test_func(L);
 
 }

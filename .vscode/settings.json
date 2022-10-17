@@ -30,6 +30,7 @@
         "membuf.h": "c",
         "math.h": "c",
         "luavm_utils.h": "c",
-        "lvm.h": "c"
+        "lvm.h": "c",
+        "luaconf.h": "c"
     }
 }
