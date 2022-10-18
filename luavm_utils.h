@@ -41,6 +41,9 @@
 #endif
 
 
+#define updatebase(ci)	(base = ci->func + 1)
+
+
 
 int l_strcmp (const TString *ls, const TString *rs);
 
@@ -183,3 +186,5 @@ int floatforloop (StkId ra);
 
 void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
                          StkId ra);
+
+void print_stack(lua_State *L, StkId base);

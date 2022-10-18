@@ -3,6 +3,8 @@
 #include <ldebug.h>
 #include <lgc.h>
 #include <lfunc.h>
+#include <lobject.h>
+#include <stdio.h>
 
 int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
@@ -159,4 +161,52 @@ void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
       ncl->upvals[i] = encup[uv[i].idx];
     luaC_objbarrier(L, ncl, ncl->upvals[i]);
   }
+}
+
+void print_stack(lua_State *L, StkId base) {
+    int t = 10;
+    printf("stack: \n");
+    for (StkId sv = L->top - 1; sv >= L->stack && t >= 0; sv--, t--) {
+        const TValue *value = s2v(sv);
+        switch (ttype(value))
+        {
+            case LUA_TNUMBER:{
+                if(ttisinteger(value)){
+                    printf("integer: %lld\n", ivalue(value));
+                }
+                else{
+                    printf("float: %f\n", fltvalue(value));
+                }
+                break;
+            }
+            case LUA_TSTRING:
+            {
+                printf("string: %s\n", svalue(value));
+                break;
+            }
+            case LUA_TBOOLEAN:
+            {
+                printf("boolean: %s\n", !l_isfalse(value) ? "true" : "false");
+                break;
+            }
+            case LUA_TNIL:
+            {
+                printf("nil\n");
+                break;
+            }
+            case LUA_TTABLE:
+            {
+                printf("table: %d\n", gcvalue(value));
+                break;
+            }
+            case LUA_TFUNCTION:
+            {
+                printf("function: %d\n", gcvalue(value));
+                break;
+            }
+            break;
+        }
+    }
+    printf("stack end\n");
+    printf("cli info: %lld %lld %lld\n", L->ci->func, L->ci->top, base);
 }

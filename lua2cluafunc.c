@@ -140,6 +140,9 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
     MCF("     CClosure *func = clCvalue(s2v(ci->func));\n");
     MCF("     LClosure *or_func = clLvalue(func->upvalue);\n");
     MCF("     TValue *k = or_func->p->k;\n");
+    #ifdef JITDEBUG
+    MCF("     printf(\"func_id is %d\\n\");\n", func_id);
+    #endif
     TValue *k = cl->p->k;
     for(int pc = 0; pc < cl->p->sizecode; ++pc)
     {
@@ -149,6 +152,9 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
         int B = GETARG_B(i);
         int C = GETARG_C(i);
         MCF("__jitfunc%d_op%d: \n", func_id, pc);
+        #ifdef JITDEBUG
+        MCF("puts(\"//opcode is : %-9s\\n\");\n", opnames[op]);
+        #endif
         MCF("//opcode is : %-9s\n", opnames[op]);
         switch(op) {
             case OP_MOVE: {
@@ -304,7 +310,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("    : luaV_fastget(L, s2v(base + %d), rb, slot, luaH_get)) {\n", A);
                 MCF("   luaV_finishfastset(L, s2v(base + %d), slot, rc);\n", A);
                 MCF("} else {\n");
-                MCF("   luaV_finishset(L, s2v(base + %d), rb, rc, slot);\n");
+                MCF("   luaV_finishset(L, s2v(base + %d), rb, rc, slot);\n", A);
                 MCF("}\n");
                 MCF("}\n");
                 break;
@@ -557,6 +563,8 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("if (b != 0) L->top = (base + %d) + b;\n", A);
                 MCF("luaD_callnoyield(L, base + %d, nresults);\n", A);
                 MCF("adjustresults(L, nresults);\n");
+                MCF("updatebase(ci);\n");
+                //MCF("print_stack(L, base);\n");
                 MCF("}\n");
                 break;
             }
@@ -565,6 +573,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("int b = %d;\n", B);
                 MCF("if (b != 0) L->top = (base + %d) + b;\n", A);
                 MCF("luaD_callnoyield(L, base + %d, LUA_MULTRET);\n", A);
+                MCF("updatebase(ci);\n");
                 MCF("}\n");
                 break;
             }
@@ -722,7 +731,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
             case OP_FORPREP: {
                 MCF("{\n");
                 MCF("if (forprep(L, base + %d))\n", A);
-                GEN_GOTO_OP(func_id, pc + B + 2);
+                GEN_GOTO_OP(func_id, pc + GETARG_Bx(i) + 2);
                 MCF("}\n");
                 break;
             }
@@ -852,7 +861,9 @@ lua_CFunction create_clua_func_from_lua(lua_State *L, LClosure *cl)
         return NULL;
     }
     const char *code = membuf_to_string(&buff);
-    // printf("%s\n", code);
+    #ifdef JITDEBUG
+    printf("%s\n", code);
+    #endif
     return create_clua_func_from_c(L, fname, code);
     //return create_test_func(L);
 
