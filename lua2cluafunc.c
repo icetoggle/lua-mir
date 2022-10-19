@@ -563,7 +563,6 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("if (b != 0) L->top = (base + %d) + b;\n", A);
                 MCF("luaD_callnoyield(L, base + %d, nresults);\n", A);
                 MCF("adjustresults(L, nresults);\n");
-                MCF("updatebase(ci);\n");
                 //MCF("print_stack(L, base);\n");
                 MCF("}\n");
                 break;
@@ -573,7 +572,6 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 MCF("int b = %d;\n", B);
                 MCF("if (b != 0) L->top = (base + %d) + b;\n", A);
                 MCF("luaD_callnoyield(L, base + %d, LUA_MULTRET);\n", A);
-                MCF("updatebase(ci);\n");
                 MCF("}\n");
                 break;
             }
@@ -818,6 +816,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 assert(false);
                 break;
         }
+        MCF("updatebase(ci);\n");
     }
     MCF("return 0;\n");
     MCF("}\n");
