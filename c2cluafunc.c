@@ -33,6 +33,8 @@ static int get_data(void *data)
 
 
 
+
+
 lua_CFunction create_clua_func_from_c(lua_State *L, const char *source_name, const char* code)
 {
     mir_ctx_wrapper* wrapper = init_mir_context(L);
@@ -62,14 +64,14 @@ lua_CFunction create_clua_func_from_c(lua_State *L, const char *source_name, con
         }
         MIR_load_module(ctx, module);
     }
-    MIR_gen_set_optimize_level(ctx, 0, 2);
+    MIR_gen_set_optimize_level(ctx, 0, 3);
     if(rt_func == NULL)
     {
         luaL_error(L, "rt_func == NULL");
         return NULL;
     }
     MIR_link(ctx, MIR_set_gen_interface, import_luacfun_resolver);
-    MIR_gen(ctx, 0, rt_func);
+    // MIR_gen(ctx, 0, rt_func);
     MIR_gen_finish(ctx);
     c2mir_finish(ctx);
     lua_CFunction lua_func = (lua_CFunction)rt_func->addr;

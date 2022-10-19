@@ -58,6 +58,6 @@ luavm_utils.o: luavm_utils.c luavm_utils.h
 
 .PHONE: clean
 clean:
-	-rm -rf *.so.* test_mir *.o *.a *.so && cd mir && make clean
+	-rm -rf *.so.* test_mir *.o *.a *.so lua && cd mir && make clean
 
 
