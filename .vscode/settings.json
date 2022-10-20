@@ -32,6 +32,7 @@
         "luavm_utils.h": "c",
         "lvm.h": "c",
         "luaconf.h": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "luamir_ctx.h": "c"
     }
 }

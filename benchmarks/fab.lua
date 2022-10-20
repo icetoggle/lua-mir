@@ -13,7 +13,7 @@ local t2 = os.clock()
 print("time: ", t2 - t1)
 
 local luamir = require 'luamir'
--- print(luamir.lua2c(fab))
+print(luamir.lua2c(fab))
 local jitfab = luamir.ljit(fab)
 local t1 = os.clock()
 print(jitfab(n))

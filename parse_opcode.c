@@ -70,7 +70,7 @@ const char *arithf_opcode(char op)
 
 
 
-void parse_op_arith(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+void parse_op_arith(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int C)
 {
     MCF("{\n");
     MCF("TValue *v1 = s2v(base + %u);\n", B);
@@ -93,7 +93,7 @@ void parse_op_arith(int func_id, int pc_idx, Membuf *buf, char op, int A, int B,
     MCF("}\n");
 }
 
-void parse_op_arithf(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+void parse_op_arithf(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int C)
 {
     MCF("{\n");
     MCF("TValue *v1 = s2v(base + %u);\n", B);
@@ -107,7 +107,7 @@ void parse_op_arithf(int func_id, int pc_idx, Membuf *buf, char op, int A, int B
     MCF("}\n");
 }
 
-void parse_op_bitwise(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+void parse_op_bitwise(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int C)
 {
     MCF("{\n");
     MCF("TValue *v1 = s2v(base + %u);\n", B);
@@ -122,7 +122,7 @@ void parse_op_bitwise(int func_id, int pc_idx, Membuf *buf, char op, int A, int 
 }
 
 
-void parse_op_order(int func_id, int pc_idx, Membuf *buf, int A, int B, int k, int next_sj, const char* opi, const char *opn, const char *other)
+void parse_op_order(int func_id, int pc_idx, LuaMirContext *ctx, int A, int B, int k, int next_sj, const char* opi, const char *opn, const char *other)
 {
     MCF("{\n");
     MCF("int cond;\n");
@@ -143,7 +143,7 @@ void parse_op_order(int func_id, int pc_idx, Membuf *buf, int A, int B, int k, i
     MCF("}\n");
 }
 
-void parse_op_orderI(int func_id, int pc_idx, Membuf *buf, int A, int B, int C, int k, int next_sj, const char* opi, const char* opf, const char* inv, const char* tm)
+void parse_op_orderI(int func_id, int pc_idx, LuaMirContext *ctx, int A, int B, int C, int k, int next_sj, const char* opi, const char* opf, const char* inv, const char* tm)
 {
     MCF("{\n");
     MCF("int cond;\n");
@@ -164,7 +164,7 @@ void parse_op_orderI(int func_id, int pc_idx, Membuf *buf, int A, int B, int C, 
     GEN_GOTO_OP(func_id, pc_idx + next_sj + 2);
     MCF("}\n");
 }
-void parse_op_arithI(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int imm)
+void parse_op_arithI(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int imm)
 {
     MCF("{\n");
     MCF("TValue *v1 = s2v(base + %d);\n", B);
@@ -185,7 +185,7 @@ void parse_op_arithI(int func_id, int pc_idx, Membuf *buf, char op, int A, int B
     MCF("}\n");
 }
 
-void parse_op_arithK(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+void parse_op_arithK(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int C)
 {
     MCF("{\n");
     MCF("TValue *v1 = s2v(base + %d);\n", B);
@@ -208,7 +208,7 @@ void parse_op_arithK(int func_id, int pc_idx, Membuf *buf, char op, int A, int B
 }
 
 
-void parse_op_arithKf(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+void parse_op_arithKf(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int C)
 {
     MCF("{\n");
     MCF("TValue *v1 = s2v(base + %d);\n", B);
@@ -222,7 +222,7 @@ void parse_op_arithKf(int func_id, int pc_idx, Membuf *buf, char op, int A, int 
     MCF("}\n");
 }
 
-void parse_op_bitwiseK(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int C)
+void parse_op_bitwiseK(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int C)
 {
     MCF("{\n");
     MCF("TValue *v1 = s2v(base + %d);\n", B);
@@ -237,7 +237,7 @@ void parse_op_bitwiseK(int func_id, int pc_idx, Membuf *buf, char op, int A, int
     MCF("}\n");
 }
 
-void parse_op_shiftI(int func_id, int pc_idx, Membuf *buf, char op, int A, int B, int ic)
+void parse_op_shiftI(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A, int B, int ic)
 {
     MCF("{\n");
     MCF("TValue *rb = s2v(base + %d);\n", B);
@@ -257,7 +257,7 @@ void parse_op_shiftI(int func_id, int pc_idx, Membuf *buf, char op, int A, int B
     MCF("}\n");
 }
 
-void parse_op_loadk(Membuf *buf, int A, int bx, TValue *k)
+void parse_op_loadk(LuaMirContext *ctx, int A, int bx, TValue *k)
 {
     TValue* b = k + bx;
     MCF("{\n");

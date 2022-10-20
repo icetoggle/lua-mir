@@ -11,6 +11,10 @@
 #include "testfunc.h"
 #include "lua_std_cfunc.h"
 #include <lopnames.h>
+#include <ldebug.h>
+#include "luamir_ctx.h"
+#include <lauxlib.h>
+#include <lobject.h>
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
 
 static TValue *index2value (lua_State *L, int idx) {
@@ -114,36 +118,12 @@ static int get_jit_funcid(lua_State *L)
                     MCF("TValue *rc = s2v(base+%d);\n", C); \
                 }
 
-bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
+void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump) 
 {
-    MCF("#define LUA_LIB\n");
-    for(size_t i = 0; i < LUA_HEADER_LIST_SIZE; i++) {
-        MCF("#include \"%s\"\n", lua_header_list[i]);
-    }
-    MCF("#include \"lapi.h\"\n");
-    MCF("#include \"math.h\"\n");
-    MCF("#include \"luavm_utils.h\"\n");
-    MCF("#define savestate(L,ci)		(L->top = ci->top)\n");
-    MCF("#define Protect(exp)  (savestate(L,ci), (exp))\n");
-    MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
-    MCF("    CallInfo *ci = L->ci;\n");
-    MCF("    StkId base = ci->func + 1;\n");
-    MCF("    for(StkId skd = L->top; skd <= base; ++skd) {\n");
-    MCF("       setnilvalue(s2v(skd));\n");
-    MCF("    }\n");
-
-//  CClosure *func = clCvalue(s2v(ci->func));
-//       return (idx <= func->nupvalues) ? &func->upvalue[idx-1]
-//                                       : &G(L)->nilvalue;
-
-
-    MCF("     CClosure *func = clCvalue(s2v(ci->func));\n");
-    MCF("     LClosure *or_func = clLvalue(func->upvalue);\n");
-    MCF("     TValue *k = or_func->p->k;\n");
-    #ifdef JITDEBUG
-    MCF("     printf(\"func_id is %d\\n\");\n", func_id);
-    #endif
     TValue *k = cl->p->k;
+    if(scan_jump) {
+        ctx->is_scan_jump = true;
+    }
     for(int pc = 0; pc < cl->p->sizecode; ++pc)
     {
         const Instruction i = cl->p->code[pc];
@@ -151,11 +131,15 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
         int A = GETARG_A(i);
         int B = GETARG_B(i);
         int C = GETARG_C(i);
-        MCF("__jitfunc%d_op%d: \n", func_id, pc);
+        if(array_exist(&ctx->exist_jumps, pc + 1))
+        {
+            MCF("__jitfunc%d_op%d: \n", func_id, pc + 1);
+        }
         #ifdef JITDEBUG
-        MCF("puts(\"//opcode is : %-9s\\n\");\n", opnames[op]);
+        MCF("puts(\"//opcode is : %-9s %d\\n\");\n", opnames[op], luaG_getfuncline(cl->p, pc));
         #endif
-        MCF("//opcode is : %-9s\n", opnames[op]);
+        MCF("//opcode is : %-9s %d\n", opnames[op], luaG_getfuncline(cl->p, pc));
+        MCF("updatebase(ci);\n");
         switch(op) {
             case OP_MOVE: {
                 MCF("{\n");
@@ -178,11 +162,11 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 break;
             }
             case OP_LOADK: {
-                parse_op_loadk(buf, A, GETARG_Bx(i), k);
+                parse_op_loadk(ctx, A, GETARG_Bx(i), k);
                 break;
             }
             case OP_LOADKX: {
-                parse_op_loadk(buf, A, GETARG_Ax(cl->p->code[++pc]), k);
+                parse_op_loadk(ctx, A, GETARG_Ax(cl->p->code[++pc]), k);
                 break;
             }
             case OP_LOADFALSE: {
@@ -380,103 +364,103 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 break;
             }
             case OP_ADDI: {
-                parse_op_arithI(func_id, pc, buf, '+', A, B, GETARG_sC(i));
+                parse_op_arithI(func_id, pc, ctx, '+', A, B, GETARG_sC(i));
                 break;
             }
             case OP_ADDK: {
-                parse_op_arithK(func_id, pc, buf, '+', A, B, C);
+                parse_op_arithK(func_id, pc, ctx, '+', A, B, C);
                 break;
             }
             case OP_SUBK: {
-                parse_op_arithK(func_id, pc, buf, '-', A, B, C);
+                parse_op_arithK(func_id, pc, ctx, '-', A, B, C);
                 break;
             }
             case OP_MULK: {
-                parse_op_arithK(func_id, pc, buf, '*', A, B, C);
+                parse_op_arithK(func_id, pc, ctx, '*', A, B, C);
                 break;
             }
             case OP_MODK: {
-                parse_op_arithK(func_id, pc, buf, '%', A, B, C);
+                parse_op_arithK(func_id, pc, ctx, '%', A, B, C);
                 break;
             }
             case OP_POWK: {
-                parse_op_arithKf(func_id, pc, buf, '^', A, B, C);
+                parse_op_arithKf(func_id, pc, ctx, '^', A, B, C);
                 break;
             }
             case OP_DIVK: {
-                parse_op_arithKf(func_id, pc, buf, '/', A, B, C);
+                parse_op_arithKf(func_id, pc, ctx, '/', A, B, C);
                 break;
             }
             case OP_IDIVK: {
-                parse_op_arithK(func_id, pc, buf, '\\', A, B, C);
+                parse_op_arithK(func_id, pc, ctx, '\\', A, B, C);
                 break;
             }
             case OP_BANDK: {
-                parse_op_bitwiseK(func_id, pc, buf, '&', A, B, C);
+                parse_op_bitwiseK(func_id, pc, ctx, '&', A, B, C);
                 break;
             }
             case OP_BORK: {
-                parse_op_bitwiseK(func_id, pc, buf, '|', A, B, C);
+                parse_op_bitwiseK(func_id, pc, ctx, '|', A, B, C);
                 break;
             }
             case OP_BXORK: {
-                parse_op_bitwiseK(func_id, pc, buf, '^', A, B, C);
+                parse_op_bitwiseK(func_id, pc, ctx, '^', A, B, C);
                 break;
             }
             case OP_SHRI: {
-                parse_op_shiftI(func_id, pc, buf, '>', A, B, GETARG_sC(i));
+                parse_op_shiftI(func_id, pc, ctx, '>', A, B, GETARG_sC(i));
                 break;
             }
             case OP_SHLI: {
-                parse_op_shiftI(func_id, pc, buf, '<', A, B, GETARG_sC(i));
+                parse_op_shiftI(func_id, pc, ctx, '<', A, B, GETARG_sC(i));
                 break;
             }
             case OP_ADD: {
-                parse_op_arith(func_id, pc, buf, '+', A, B, C);
+                parse_op_arith(func_id, pc, ctx, '+', A, B, C);
                 break;
             }
             case OP_SUB: {
-                parse_op_arith(func_id, pc, buf, '-', A, B, C);
+                parse_op_arith(func_id, pc, ctx, '-', A, B, C);
                 break;
             }
             case OP_MUL: {
-                parse_op_arith(func_id, pc, buf, '*', A, B, C);
+                parse_op_arith(func_id, pc, ctx, '*', A, B, C);
                 break;
             }
             case OP_MOD: {
-                parse_op_arith(func_id, pc, buf, '%', A, B, C);
+                parse_op_arith(func_id, pc, ctx, '%', A, B, C);
                 break;
             }
             case OP_POW: {
-                parse_op_arithf(func_id, pc, buf, '^', A, B, C);
+                parse_op_arithf(func_id, pc, ctx, '^', A, B, C);
                 break;
             }
             case OP_DIV: {
-                parse_op_arithf(func_id, pc, buf, '/', A, B, C);
+                parse_op_arithf(func_id, pc, ctx, '/', A, B, C);
                 break;
             }
             case OP_IDIV: {
-                parse_op_arith(func_id, pc, buf, '\\', A, B, C);
+                parse_op_arith(func_id, pc, ctx, '\\', A, B, C);
                 break;
             }
             case OP_BAND: {
-                parse_op_bitwise(func_id, pc, buf, '&', A, B, C);
+                parse_op_bitwise(func_id, pc, ctx, '&', A, B, C);
                 break;
             }
             case OP_BOR: {
-                parse_op_bitwise(func_id, pc, buf, '|', A, B, C);
+                parse_op_bitwise(func_id, pc, ctx, '|', A, B, C);
                 break;
             }
             case OP_BXOR: {
-                parse_op_bitwise(func_id, pc, buf, '^', A, B, C);
+                parse_op_bitwise(func_id, pc, ctx, '^', A, B, C);
                 break;
             }
             case OP_SHR: {
-                parse_op_bitwise(func_id, pc, buf, '>', A, B, C);
+                parse_op_bitwise(func_id, pc, ctx, '>', A, B, C);
                 break;
             }
             case OP_SHL: {
-                parse_op_bitwise(func_id, pc, buf, '<', A, B, C);
+                parse_op_bitwise(func_id, pc, ctx, '<', A, B, C);
                 break;
             }
 
@@ -604,11 +588,11 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 break;
             }
             case OP_LT: {
-                parse_op_order(func_id, pc, buf, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "LTnum", "lessthanothers");
+                parse_op_order(func_id, pc, ctx, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "LTnum", "lessthanothers");
                 break;
             }
             case OP_LE: {
-                parse_op_order(func_id, pc, buf, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "LEnum", "lessequalothers");
+                parse_op_order(func_id, pc, ctx, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "LEnum", "lessequalothers");
                 break;
             }
             case OP_EQK : {
@@ -642,19 +626,19 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 break;
             }
             case OP_LTI: {
-                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "luai_numlt", "0", "TM_LT");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "luai_numlt", "0", "TM_LT");
                 break;
             }
             case OP_LEI: {
-                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "luai_numle", "0", "TM_LE");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "luai_numle", "0", "TM_LE");
                 break;
             }
             case OP_GTI: {
-                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gti", "luai_numgt", "1", "TM_LT");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gti", "luai_numgt", "1", "TM_LT");
                 break;
             }
             case OP_GEI: {
-                parse_op_orderI(func_id, pc, buf, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gei", "luai_numge", "1", "TM_LE");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gei", "luai_numge", "1", "TM_LE");
                 break;
             }
             case OP_TEST: {
@@ -692,6 +676,7 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
             }
             case OP_RETURN0:
             {
+                MCF("return 0;\n");
                 break;
             }
             case OP_RETURN: {
@@ -816,8 +801,43 @@ bool codegen_lua2c(lua_State *L, LClosure *cl, int func_id, Membuf *buf)
                 assert(false);
                 break;
         }
-        MCF("updatebase(ci);\n");
     }
+    if(scan_jump) {
+        ctx->is_scan_jump = false;
+    }
+}
+
+bool codegen_lua2c(LClosure *cl, int func_id, LuaMirContext *ctx)
+{
+    opcode2c(ctx, func_id, cl, true);
+    MCF("#define LUA_LIB\n");
+    for(size_t i = 0; i < LUA_HEADER_LIST_SIZE; i++) {
+        MCF("#include \"%s\"\n", lua_header_list[i]);
+    }
+    MCF("#include \"lapi.h\"\n");
+    MCF("#include \"math.h\"\n");
+    MCF("#include \"luavm_utils.h\"\n");
+    MCF("#define savestate(L,ci)		(L->top = ci->top)\n");
+    MCF("#define Protect(exp)  (savestate(L,ci), (exp))\n");
+    MCF("static int __jit_lfunc%d(lua_State *L) {\n", func_id);
+    MCF("    CallInfo *ci = L->ci;\n");
+    MCF("    StkId base = ci->func + 1;\n");
+    MCF("    for(StkId skd = L->top; skd <= base; ++skd) {\n");
+    MCF("       setnilvalue(s2v(skd));\n");
+    MCF("    }\n");
+
+//  CClosure *func = clCvalue(s2v(ci->func));
+//       return (idx <= func->nupvalues) ? &func->upvalue[idx-1]
+//                                       : &G(L)->nilvalue;
+
+
+    MCF("     CClosure *func = clCvalue(s2v(ci->func));\n");
+    MCF("     LClosure *or_func = clLvalue(func->upvalue);\n");
+    MCF("     TValue *k = or_func->p->k;\n");
+    #ifdef JITDEBUG
+    MCF("     printf(\"func_id is %d\\n\");\n", func_id);
+    #endif
+    opcode2c(ctx, func_id, cl, false);
     MCF("return 0;\n");
     MCF("}\n");
     return true;
@@ -832,15 +852,15 @@ int convert_lua_to_ccode(lua_State *L, LClosure *cl)
     char fname[64];
     int fun_id = get_jit_funcid(L);
     sprintf(fname, "__jit_lfunc%d", fun_id);
-    Membuf buff;
-    membuf_init(&buff);
-    if(!codegen_lua2c(L, cl, fun_id, &buff)) {
-        membuf_free(&buff);
+    LuaMirContext *ctx = luamir_ctx_new();
+    if(!codegen_lua2c(cl, fun_id, ctx)) {
+        luamir_ctx_free(ctx);
+        luaL_error(L, "codegen_lua2c failed");
         return 0;
     }
-    const char *code = membuf_to_string(&buff);
+    const char *code = membuf_to_string(&ctx->buf);
     lua_pushstring(L, code);
-    membuf_free(&buff);
+    luamir_ctx_free(ctx);
     return 1;
 }
 
@@ -853,17 +873,19 @@ lua_CFunction create_clua_func_from_lua(lua_State *L, LClosure *cl)
     char fname[64];
     int fun_id = get_jit_funcid(L);
     sprintf(fname, "__jit_lfunc%d", fun_id);
-    Membuf buff;
-    membuf_init(&buff);
-    if(!codegen_lua2c(L, cl, fun_id, &buff)) {
-        membuf_free(&buff);
+    LuaMirContext *ctx = luamir_ctx_new();
+    if(!codegen_lua2c(cl, fun_id, ctx)) {
+        luamir_ctx_free(ctx);
+        luaL_error(L, "codegen_lua2c failed");
         return NULL;
     }
-    const char *code = membuf_to_string(&buff);
+    const char *code = membuf_to_string(&ctx->buf);
     #ifdef JITDEBUG
     printf("%s\n", code);
     #endif
-    return create_clua_func_from_c(L, fname, code);
-    //return create_test_func(L);
+    lua_CFunction func = create_clua_func_from_c(L, fname, code);
+    luamir_ctx_free(ctx);
+    //func =  create_test_func(L);
+    return func;
 
 }

@@ -9,6 +9,7 @@ void membuf_init(Membuf *buf)
     buf->cap = 16;
 }
 
+
 void membuf_free(Membuf *buf)
 {
     free(buf->buf);

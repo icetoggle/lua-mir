@@ -5,3 +5,4 @@ test_mir
 lua_std_cfunc.c
 lua
 luac
+luac.out
