@@ -1,5 +1,7 @@
 #include "parse_opcode.h"
 #include "lopcodes.h"
+#include <lobject.h>
+#include <lstate.h>
 
 
 const char *arithi_opcode(char op) 
@@ -259,31 +261,39 @@ void parse_op_shiftI(int func_id, int pc_idx, LuaMirContext *ctx, char op, int A
 
 void parse_op_loadk(LuaMirContext *ctx, int A, int bx, TValue *k)
 {
-    TValue* b = k + bx;
+    const TValue* b = k + bx;
     MCF("{\n");
-    switch (b->tt_)
+    switch (ttype(b))
     {
-    case LUA_VNUMINT: {
-        MCF("setivalue(s2v(base + %d), %lld);\n", A, b->value_.i);
-        break;
-    }
-    case LUA_VNUMFLT: {
-        MCF("setfltvalue(s2v(base + %d), %f);\n", A, b->value_.n);
-        break;
-    }
-    case LUA_VFALSE: {
-        MCF("setbtvalue(s2v(base + %d));\n", A);
-        break;
-    }
-    case LUA_VTRUE: {
-        MCF("setbfvalue(s2v(base + %d));\n", A);
-        break;
-    }
-    default:
-    {
-        MCF("setobj2s(L, base + %d, k + %d);\n", A, bx);
-        break;
-    }
+        case LUA_TNUMBER: {
+            if(ttisinteger(b)) {
+                MCF("setivalue(s2v(base + %d), %lld);\n", A, ivalue(b));
+            }
+            else {
+                MCF("setfltvalue(s2v(base + %d), %f);\n", A, fltvalue(b));
+            }
+            break;
+        }
+        case LUA_TBOOLEAN: {
+            if(!l_isfalse(b)) {
+                MCF("setbtvalue(s2v(base + %d));\n", A);
+            }
+            else {
+                MCF("setbfvalue(s2v(base + %d));\n", A);
+            }
+            break;
+        }
+        case LUA_TNIL: {
+            MCF("setnilvalue(s2v(base + %d));\n", A);
+            break;
+        }
+        case LUA_TSTRING: {
+            MCF("setobj2s(L, base + %d, k + %d);\n", A, bx);
+            break;
+        }
+        default: {
+
+        }
     }
     MCF("}\n");
 }

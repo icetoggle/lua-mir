@@ -164,9 +164,9 @@ void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
 }
 
 void print_stack(lua_State *L, StkId base) {
-    int t = 10;
+    int t = 20;
     printf("stack: \n");
-    for (StkId sv = L->top - 1; sv >= L->stack && t >= 0; sv--, t--) {
+    for (StkId sv = L->top - 1; sv >= base && t >= 0; sv--, t--) {
         const TValue *value = s2v(sv);
         switch (ttype(value))
         {
@@ -210,3 +210,52 @@ void print_stack(lua_State *L, StkId base) {
     printf("stack end\n");
     printf("cli info: %lld %lld %lld\n", L->ci->func, L->ci->top, base);
 }
+
+
+void print_valuelist(lua_State *L, TValue *k, int ksize) {
+    int t = 20;
+    printf("kvalue: %lld\n", k);
+    for (TValue *value = k; value != k + ksize; ++value) {
+        switch (ttype(value))
+        {
+            case LUA_TNUMBER:{
+                if(ttisinteger(value)){
+                    printf("integer: %lld\n", ivalue(value));
+                }
+                else{
+                    printf("float: %f\n", fltvalue(value));
+                }
+                break;
+            }
+            case LUA_TSTRING:
+            {
+                printf("string: %s %lld\n", svalue(value), gcvalue(value));
+                break;
+            }
+            case LUA_TBOOLEAN:
+            {
+                printf("boolean: %s\n", !l_isfalse(value) ? "true" : "false");
+                break;
+            }
+            case LUA_TNIL:
+            {
+                printf("nil %lld\n", gcvalue(value));
+                break;
+            }
+            case LUA_TTABLE:
+            {
+                printf("table: %lld\n", gcvalue(value));
+                break;
+            }
+            case LUA_TFUNCTION:
+            {
+                printf("function: %lld\n", gcvalue(value));
+                break;
+            }
+            break;
+        }
+    }
+    printf("kvalue end\n");
+}
+
+

@@ -1,6 +1,8 @@
 #include "membuf.h"
 #include <stdlib.h>
 #include <string.h>
+#include <luaconf.h>
+#include <ctype.h>
 
 void membuf_init(Membuf *buf)
 {
@@ -75,4 +77,27 @@ const char* membuf_to_string(Membuf *buf)
 {
     membuf_append_char(buf, '\0');
     return buf->buf;
+}
+
+
+void  membuf_addquoted (Membuf *buf, const char *s, size_t len) {
+  membuf_append_char(buf, '"');
+  while (len--) {
+    if (*s == '"' || *s == '\\' || *s == '\n') {
+      membuf_append_char(buf, '\\');
+      membuf_append_char(buf, *s);
+    }
+    else if (iscntrl(*s)) {
+      char buff[10];
+      if (!isdigit(*(s+1)))
+        l_sprintf(buff, sizeof(buff), "\\%d", (int)(*s));
+      else
+        l_sprintf(buff, sizeof(buff), "\\%03d", (int)(*s));
+      membuf_append(buf, buff, strlen(buff));
+    }
+    else
+      membuf_append_char(buf, *s);
+    s++;
+  }
+  membuf_append_char(buf, '"');
 }

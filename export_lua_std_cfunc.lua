@@ -63,6 +63,7 @@ table.insert(export_func_list, 'floatforloop')
 table.insert(export_func_list, 'pushclosure')
 table.insert(export_func_list, 'puts')
 table.insert(export_func_list, 'print_stack')
+table.insert(export_func_list, 'print_valuelist')
 
 table.sort(export_func_list)
 

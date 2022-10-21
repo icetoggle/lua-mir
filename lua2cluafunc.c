@@ -15,6 +15,9 @@
 #include "luamir_ctx.h"
 #include <lauxlib.h>
 #include <lobject.h>
+#include <ltable.h>
+#include <lvm.h>
+#include <string.h>
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
 
 static TValue *index2value (lua_State *L, int idx) {
@@ -65,12 +68,16 @@ LClosure *lua_pushlclosure(lua_State *L, LClosure *cl)
     return cl;
 }
 
+CClosure *lua_tocclosure(lua_State *L, int idx) 
+{
+    const TValue *o = index2value(L, idx);
+    if(!ttisCclosure(o)) {
+        return NULL;
+    }
+    CClosure *c = gco2ccl(val_(o).gc);
+    return c;
+}
 
-struct function {
-    struct lua_State *L;
-    struct Proto *p;
-    char fname[32];
-};
 
 static bool jit_cancompile(Proto* f)
 {
@@ -101,6 +108,8 @@ static int get_jit_funcid(lua_State *L)
 
 
 
+
+
 #define RA(i)	(base+GETARG_A(i))
 #define RB(i)	(base+GETARG_B(i))
 #define vRB(i)	s2v(RB(i))
@@ -118,15 +127,15 @@ static int get_jit_funcid(lua_State *L)
                     MCF("TValue *rc = s2v(base+%d);\n", C); \
                 }
 
-void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump) 
+void opcode2c(LuaMirContext *ctx,int func_id, Proto *p, bool scan_jump) 
 {
-    TValue *k = cl->p->k;
+    TValue *k = p->k;
     if(scan_jump) {
         ctx->is_scan_jump = true;
     }
-    for(int pc = 0; pc < cl->p->sizecode; ++pc)
+    for(int pc = 0; pc < p->sizecode; ++pc)
     {
-        const Instruction i = cl->p->code[pc];
+        const Instruction i = p->code[pc];
         OpCode op = GET_OPCODE(i);
         int A = GETARG_A(i);
         int B = GETARG_B(i);
@@ -136,9 +145,9 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
             MCF("__jitfunc%d_op%d: \n", func_id, pc + 1);
         }
         #ifdef JITDEBUG
-        MCF("puts(\"//opcode is : %-9s %d\\n\");\n", opnames[op], luaG_getfuncline(cl->p, pc));
+        MCF("puts(\"//opcode is : %-9s %d\\n\");\n", opnames[op], luaG_getfuncline(p, pc));
         #endif
-        MCF("//opcode is : %-9s %d\n", opnames[op], luaG_getfuncline(cl->p, pc));
+        MCF("//opcode is : %-9s %d\n", opnames[op], luaG_getfuncline(p, pc));
         MCF("updatebase(ci);\n");
         switch(op) {
             case OP_MOVE: {
@@ -166,7 +175,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 break;
             }
             case OP_LOADKX: {
-                parse_op_loadk(ctx, A, GETARG_Ax(cl->p->code[++pc]), k);
+                parse_op_loadk(ctx, A, GETARG_Ax(p->code[++pc]), k);
                 break;
             }
             case OP_LOADFALSE: {
@@ -195,16 +204,14 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
             case OP_GETUPVAL: {
                 MCF("{\n");
                 MCF("int b = %d;\n", B);
-                MCF("setobj2s(L, base+%d, or_func->upvals[b]->v);\n", A);
+                MCF("setobj2s(L, base+%d,func->upvalue + b);\n", A);
                 MCF("}\n");
                 break;
             }
             case OP_SETUPVAL: {
                 MCF("{\n");
                 MCF("int b = %d;\n", B);
-                MCF("UpVal *uv = or_func->upvals[b];\n");
-                MCF("setobj(L, uv->v, s2v(base+%d));\n", A);
-                MCF("luaC_barrier(L, uv, s2v(base+%d));", A);
+                MCF("setobj(L, func->upvalue + b, s2v(base+%d));\n", A);
                 MCF("}\n");
                 break;
             }
@@ -213,7 +220,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 MCF("const TValue *slot;\n");
                 MCF("int b = %d;\n", B);
                 MCF("int c = %d;\n", C);
-                MCF("TValue *upval = or_func->upvals[b]->v;\n");
+                MCF("TValue *upval = func->upvalue + b;\n");
                 MCF("TValue *rc = k+c;\n");
                 MCF("TString *key = tsvalue(rc);\n");
                 MCF("if (luaV_fastget(L, upval, key, slot, luaH_getshortstr)) {\n");
@@ -271,7 +278,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
             case OP_SETTABUP: {
                 MCF("{\n");
                 MCF("const TValue *slot;\n");
-                MCF("TValue *upval = or_func->->upvals[%d]->v;", A);
+                MCF("TValue *upval = func->upvalue + %d;", A);
                 MCF("TValue *rb = k + %d;\n", B);
                 MCF("TValue *rc = k + %d;\n", C);
                 MCF("TString *key = tsvalue(rb);\n");
@@ -336,7 +343,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 MCF("if (b > 0)\n");
                 MCF("  b = 1 << (b - 1);  /* size is 2^(b - 1) */\n");
                 if(TESTARG_k(i))
-                    MCF("c += %d * (%d + 1);\n", GETARG_Ax(cl->p->code[i+1]), MAXARG_C);
+                    MCF("c += %d * (%d + 1);\n", GETARG_Ax(p->code[i+1]), MAXARG_C);
                 MCF("L->top = base + %d + 1;    /* correct top in case of emergency GC */\n", A);
                 MCF("t = luaH_new(L);  /* memory allocation */\n");
                 MCF("sethvalue2s(L, base + %d, t);\n", A);
@@ -465,7 +472,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
             }
 
             case OP_MMBIN: {
-                Instruction pi = cl->p->code[pc - 1];
+                Instruction pi = p->code[pc - 1];
                 MCF("{\n");
                 MCF("TValue *rb = s2v(base + %u);\n", B);
                 MCF("TMS tm = (TMS)%u;\n", C);
@@ -477,7 +484,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 break;
             }
             case OP_MMBINI: {
-                Instruction pi = cl->p->code[pc - 1];
+                Instruction pi = p->code[pc - 1];
                 MCF("{\n");
                 MCF("int imm = %d;\n", GETARG_sB(i));
                 MCF("TMS tm = (TMS)%u;\n", C);
@@ -489,7 +496,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 break;
             }
             case OP_MMBINK: {
-                Instruction pi = cl->p->code[pc - 1];
+                Instruction pi = p->code[pc - 1];
                 MCF("{\n");
                 MCF("TValue *imm = k + %d;\n", B);
                 MCF("TMS tm = (TMS)%d;\n", C);
@@ -582,17 +589,17 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 MCF("if (cond != %d) {\n", GETARG_k(i));
                 GEN_GOTO_OP(func_id, pc + 2);
                 MCF("} else {\n");
-                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(p->code[pc + 1]) + 2);
                 MCF("}\n");
                 MCF("}\n");
                 break;
             }
             case OP_LT: {
-                parse_op_order(func_id, pc, ctx, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "LTnum", "lessthanothers");
+                parse_op_order(func_id, pc, ctx, A, B, GETARG_k(i), GETARG_sJ(p->code[pc + 1]), "l_lti", "LTnum", "lessthanothers");
                 break;
             }
             case OP_LE: {
-                parse_op_order(func_id, pc, ctx, A, B, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "LEnum", "lessequalothers");
+                parse_op_order(func_id, pc, ctx, A, B, GETARG_k(i), GETARG_sJ(p->code[pc + 1]), "l_lei", "LEnum", "lessequalothers");
                 break;
             }
             case OP_EQK : {
@@ -602,7 +609,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 MCF("if (cond != %d) {\n", GETARG_k(i));
                 GEN_GOTO_OP(func_id, pc + 2);
                 MCF("} else {\n");
-                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(p->code[pc + 1]) + 2);
                 MCF("}\n");
                 MCF("}\n");
                 break;
@@ -620,25 +627,25 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 MCF("if (cond != %d) {\n", GETARG_k(i));
                 GEN_GOTO_OP(func_id, pc + 2);
                 MCF("} else {\n");
-                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(p->code[pc + 1]) + 2);
                 MCF("}\n");
                 MCF("}\n");
                 break;
             }
             case OP_LTI: {
-                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lti", "luai_numlt", "0", "TM_LT");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(p->code[pc + 1]), "l_lti", "luai_numlt", "0", "TM_LT");
                 break;
             }
             case OP_LEI: {
-                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_lei", "luai_numle", "0", "TM_LE");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(p->code[pc + 1]), "l_lei", "luai_numle", "0", "TM_LE");
                 break;
             }
             case OP_GTI: {
-                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gti", "luai_numgt", "1", "TM_LT");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(p->code[pc + 1]), "l_gti", "luai_numgt", "1", "TM_LT");
                 break;
             }
             case OP_GEI: {
-                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(cl->p->code[pc + 1]), "l_gei", "luai_numge", "1", "TM_LE");
+                parse_op_orderI(func_id, pc, ctx, A, B, C, GETARG_k(i), GETARG_sJ(p->code[pc + 1]), "l_gei", "luai_numge", "1", "TM_LE");
                 break;
             }
             case OP_TEST: {
@@ -647,7 +654,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 MCF("if (cond != %d) {\n", GETARG_k(i));
                 GEN_GOTO_OP(func_id, pc + 2);
                 MCF("} else {\n");
-                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(p->code[pc + 1]) + 2);
                 MCF("}\n");
                 MCF("}\n");
                 break;
@@ -659,7 +666,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 GEN_GOTO_OP(func_id, pc + 2);
                 MCF("} else {\n");
                 MCF("  setobj2s(L, base + %d, rb);\n", A);
-                GEN_GOTO_OP(func_id, pc + GETARG_sJ(cl->p->code[pc + 1]) + 2);
+                GEN_GOTO_OP(func_id, pc + GETARG_sJ(p->code[pc + 1]) + 2);
                 MCF("}\n");
                 MCF("}\n");
                 break;
@@ -756,7 +763,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
                 MCF("  L->top = ci->top;\n");
                 MCF("last += n;\n");
                 if (TESTARG_k(i)) {
-                    MCF("last = %d * (MAXARG_C + 1);\n", GETARG_Ax(cl->p->code[pc + 1]));
+                    MCF("last = %d * (MAXARG_C + 1);\n", GETARG_Ax(p->code[pc + 1]));
                 }
                 MCF("if (last > luaH_realasize(h))  /* needs more space? */\n");
                 MCF("  luaH_resizearray(L, h, last);  /* preallocate it at once */");
@@ -771,7 +778,7 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
             }
             case OP_CLOSURE: {
                 MCF("{\n");
-                MCF("Proto *p = or_func->p->p[%d];\n", GETARG_Bx(i));
+                //Proto *p = cl->p->p[GETARG_Bx(i)];
                 MCF("pushclosure(L, p, or_func->upvals, base, base + %d);\n", A);
                 MCF("luaC_checkGC(L);\n");
                 MCF("}\n");
@@ -807,9 +814,9 @@ void opcode2c(LuaMirContext *ctx,int func_id, LClosure *cl, bool scan_jump)
     }
 }
 
-bool codegen_lua2c(LClosure *cl, int func_id, LuaMirContext *ctx)
+bool codegen_lua2c(Proto *p, int func_id, LuaMirContext *ctx)
 {
-    opcode2c(ctx, func_id, cl, true);
+    opcode2c(ctx, func_id, p, true);
     MCF("#define LUA_LIB\n");
     for(size_t i = 0; i < LUA_HEADER_LIST_SIZE; i++) {
         MCF("#include \"%s\"\n", lua_header_list[i]);
@@ -832,28 +839,93 @@ bool codegen_lua2c(LClosure *cl, int func_id, LuaMirContext *ctx)
 
 
     MCF("     CClosure *func = clCvalue(s2v(ci->func));\n");
-    MCF("     LClosure *or_func = clLvalue(func->upvalue);\n");
-    MCF("     TValue *k = or_func->p->k;\n");
+    // MCF("     LClosure *or_func = clLvalue(&func->upvalue[%d]);\n", cl->p->sizeupvalues);
+
+//init k value
+    MCF("Table *ktable = luaH_new(L);\n");
+    MCF("{\n");
+    MCF("luaH_resize(L, ktable, %d, 0);\n",p->sizek);
+    MCF("TValue h;\n");
+    MCF("sethvalue(L, &h, ktable);\n");
+    MCF("TValue key;\n");
+    MCF("TValue value;\n");
+    MCF("const TValue* slot;\n");
+    MCF("TString* ts;\n");
+    for( int i = 0; i < p->sizek; ++i) {
+        const TValue *kval = p->k + i;
+        MCF("slot = NULL;\n");
+        MCF("setivalue(&key, %d);\n", i + 1);
+        switch (ttype(kval))
+        {
+            case LUA_TNUMBER: {
+                if(ttisinteger(kval)) {
+                    MCF("setivalue(&value, %lld);\n", ivalue(kval));
+                }
+                else {
+                    MCF("setfltvalue(&value, %f);\n", fltvalue(kval));
+                }
+                break;
+            }
+            case LUA_TBOOLEAN: {
+                if(!l_isfalse(kval)) {
+                    MCF("setbtvalue(&value);\n");
+                }
+                else {
+                    MCF("setbfvalue(&value);\n");
+                }
+                break;
+            }
+            case LUA_TNIL: {
+                MCF("setnilvalue(&value);\n");
+                break;
+            }
+            case LUA_TSTRING: {
+                MCF("ts = luaS_new(L, ");
+                const char *ts = svalue(kval);
+                membuf_addquoted(&ctx->buf, ts, strlen(ts));
+                MCF(");\n");
+                MCF("setsvalue(L, &value, ts);\n");
+                break;
+            }
+            default: {
+
+            }
+        }
+        MCF("if (luaV_fastgeti(L, &h, %d, slot)) {\n", i + 1);
+        MCF("   luaV_finishfastset(L, &h, slot, &value);\n");
+        MCF("}\n");
+        MCF("else {\n");
+        MCF("  luaV_finishset(L, &h, &key, &value, slot);\n");
+        MCF("}\n");
+    }
+    MCF("setobj2n(L, &func->upvalue[%d], &h);\n", p->sizeupvalues);
+    MCF("GCObject *o = obj2gco(func);\n");
+    MCF("luaC_barrier(L, o, &h);\n");
+    
+    MCF("}\n");
+
+
+    MCF("     TValue *k = ktable->array;\n");
     #ifdef JITDEBUG
     MCF("     printf(\"func_id is %d\\n\");\n", func_id);
     #endif
-    opcode2c(ctx, func_id, cl, false);
+    opcode2c(ctx, func_id, p, false);
     MCF("return 0;\n");
     MCF("}\n");
     return true;
 }
 
 
-int convert_lua_to_ccode(lua_State *L, LClosure *cl)
+int convert_lua_to_ccode(lua_State *L, Proto *p)
 {
-    if(!jit_cancompile(cl->p)) {
+    if(!jit_cancompile(p)) {
         return 0;
     }
     char fname[64];
     int fun_id = get_jit_funcid(L);
     sprintf(fname, "__jit_lfunc%d", fun_id);
     LuaMirContext *ctx = luamir_ctx_new();
-    if(!codegen_lua2c(cl, fun_id, ctx)) {
+    if(!codegen_lua2c(p, fun_id, ctx)) {
         luamir_ctx_free(ctx);
         luaL_error(L, "codegen_lua2c failed");
         return 0;
@@ -865,16 +937,16 @@ int convert_lua_to_ccode(lua_State *L, LClosure *cl)
 }
 
 
-lua_CFunction create_clua_func_from_lua(lua_State *L, LClosure *cl)
+lua_CFunction create_clua_func_from_lua(lua_State *L, Proto *p, int is_debug)
 {
-    if(!jit_cancompile(cl->p)) {
+    if(!jit_cancompile(p)) {
         return NULL;
     }
     char fname[64];
     int fun_id = get_jit_funcid(L);
     sprintf(fname, "__jit_lfunc%d", fun_id);
     LuaMirContext *ctx = luamir_ctx_new();
-    if(!codegen_lua2c(cl, fun_id, ctx)) {
+    if(!codegen_lua2c(p, fun_id, ctx)) {
         luamir_ctx_free(ctx);
         luaL_error(L, "codegen_lua2c failed");
         return NULL;
@@ -885,7 +957,9 @@ lua_CFunction create_clua_func_from_lua(lua_State *L, LClosure *cl)
     #endif
     lua_CFunction func = create_clua_func_from_c(L, fname, code);
     luamir_ctx_free(ctx);
-    //func =  create_test_func(L);
+    if(is_debug) {
+        func =  create_test_func(L);
+    }
     return func;
 
 }

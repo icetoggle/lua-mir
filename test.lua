@@ -318,12 +318,12 @@ local function test_var(...)
     return sum
 end
 
-local function test_pushclosure(a, b)
-    local function test(a, b)
-        return a + b
-    end
-    return test(a, b)
-end
+-- local function test_pushclosure(a, b)
+--     local function test(a, b)
+--         return a + b
+--     end
+--     return test(a, b)
+-- end
 
 
 local luamir = require 'luamir'
@@ -424,5 +424,5 @@ print("test_mulret", a == 1, b == 2, c == 3, d == 4);
 print("test_forloop", luamir.ljit(test_forloop)(10) == test_forloop(10));
 print("test_setlist", luamir.ljit(test_setlist)() == 2);
 print("test_forprep", luamir.ljit(test_forprep)(2) == 10);
-print("test_pushclosure", luamir.ljit(test_pushclosure)(1, 2) == 3);
+-- print("test_pushclosure", luamir.ljit(test_pushclosure)(1, 2) == 3);
 

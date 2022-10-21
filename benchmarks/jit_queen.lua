@@ -13,24 +13,22 @@ local function isplaceok (a, n, c)
   end
   return true    -- no attacks; place is OK
 end
-
+-- print(luamir.lua2c(isplaceok))
 isplaceok = luamir.ljit(isplaceok)
 
 
 --print a board
 local function printsolution (a)
---   for i = 1, N do
---     for j = 1, N do
---       io.write(a[i] == j and "X" or "-", " ")
---     end
---     io.write("\n")
---   end
---   io.write("\n")
+  for i = 1, N do
+    for j = 1, N do
+      io.write(a[i] == j and "X" or "-", " ")
+    end
+    io.write("\n")
+  end
+  io.write("\n")
 end
-
 printsolution = luamir.ljit(printsolution)
 
-local jitaddqueen
 -- add to board 'a' all queens from 'n' to 'N'
 local function addqueen (a, n)
   if n > N then    -- all queens have been placed?
@@ -39,17 +37,17 @@ local function addqueen (a, n)
     for c = 1, N do
       if isplaceok(a, n, c) then
         a[n] = c    -- place n-th queen at column 'c'
-        jitaddqueen(a, n + 1)
+        addqueen(a, n + 1)
       end
     end
   end
 end
 
-
-jitaddqueen = luamir.ljit(addqueen)
+-- print(luamir.lua2c(addqueen))
+addqueen = luamir.ljit(addqueen)
 
 -- run the program
 local t1 = os.clock()
-jitaddqueen({}, 1)
+addqueen({}, 1)
 local t2 = os.clock()
 print("time: ", t2 - t1)

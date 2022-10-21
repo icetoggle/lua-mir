@@ -9,7 +9,7 @@ test_mir: test_mir.o libmir.a
 	$(CC) $(CFLAGS) -o test_mir test_mir.o $(LDFLAGS) $(LIBPATH) -lmir -lpthread
 
 luamir.so: c2cluafunc.o lua-mir.o libmir.a liblua.a lua_std_cfunc.o mir_utils.o lua2cluafunc.o membuf.o parse_opcode.o testfunc.o luavm_utils.o luamir_ctx.o array.o
-	$(CC) $(CFLAGS) -shared -o $@ $? $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
+	$(CC) $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(LIBPATH) -lmir -lpthread -llua
 
 luacmatrix.so: luacmatrix.o
 	$(CC) $(CFLAGS) -shared -o luacmatrix.so luacmatrix.o
