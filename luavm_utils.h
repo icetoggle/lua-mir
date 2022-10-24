@@ -187,6 +187,10 @@ int floatforloop (StkId ra);
 void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
                          StkId ra);
 
+void pushcclosure(lua_State *L, lua_CFunction func, int nup, StkId ra);
+
 void print_stack(lua_State *L, StkId base);
 
 void print_valuelist(lua_State *L, TValue *k, int ksize);
+
+

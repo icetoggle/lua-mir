@@ -14,7 +14,7 @@ local function gen_import_func(path)
             func = string.match(line, 'LUAI_FUNC [%w_%s*]+ %*?([a-zA-z_]+) %(.*')
         end
         if not func then
-            func = string.match(line, 'LUA_API [%w_]+ %(([a-zA-z_]+)%) %(.*')
+            func = string.match(line, 'LUA_API [%w_%s]+ %(([a-zA-z_]+)%) %(.*')
         end
         if black_func[func] then
             goto continue
@@ -64,6 +64,7 @@ table.insert(export_func_list, 'pushclosure')
 table.insert(export_func_list, 'puts')
 table.insert(export_func_list, 'print_stack')
 table.insert(export_func_list, 'print_valuelist')
+table.insert(export_func_list, 'pushcclosure')
 
 table.sort(export_func_list)
 

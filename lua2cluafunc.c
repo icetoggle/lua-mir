@@ -127,7 +127,7 @@ static int get_jit_funcid(lua_State *L)
                     MCF("TValue *rc = s2v(base+%d);\n", C); \
                 }
 
-void opcode2c(LuaMirContext *ctx,int func_id, Proto *p, bool scan_jump) 
+void opcode2c(lua_State* L, LuaMirContext *ctx,int func_id, Proto *p, bool scan_jump) 
 {
     TValue *k = p->k;
     if(scan_jump) {
@@ -778,8 +778,31 @@ void opcode2c(LuaMirContext *ctx,int func_id, Proto *p, bool scan_jump)
             }
             case OP_CLOSURE: {
                 MCF("{\n");
-                //Proto *p = cl->p->p[GETARG_Bx(i)];
-                MCF("pushclosure(L, p, or_func->upvals, base, base + %d);\n", A);
+                Proto *next_p = p->p[GETARG_Bx(i)];
+                Upvaldesc *uv = next_p->upvalues;
+                lua_CFunction func = create_clua_func_from_lua(L, next_p, 0);
+                if(func == NULL)
+                {
+                    luaL_error(L, "create_clua_func_from_lua failed");
+                    return;
+                }
+                MCF("lua_CFunction func = (lua_CFunction)%lld;\n", (long long)func);
+                MCF("int nup = %d;\n", next_p->sizeupvalues + 1);
+                for(int i = 0; i < next_p->sizeupvalues; i++)
+                {
+                    if(uv[i].instack)
+                    {
+                        MCF("setobj2s(L->top, s2v(base + %d));\n", uv[i].idx);
+                        MCF("api_incr_top(L);\n");
+                    }
+                    else 
+                    {
+                        MCF("setobj2s(L->top, &cl->upvalue[%d]);\n", uv[i].idx);
+                        MCF("api_incr_top(L);\n");
+                    }
+                }
+                MCF("lua_pushnil(L);\n");
+                MCF("pushcclosure(L, func, nup, base + %d);\n", A);
                 MCF("luaC_checkGC(L);\n");
                 MCF("}\n");
                 break;
@@ -814,9 +837,9 @@ void opcode2c(LuaMirContext *ctx,int func_id, Proto *p, bool scan_jump)
     }
 }
 
-bool codegen_lua2c(Proto *p, int func_id, LuaMirContext *ctx)
+bool codegen_lua2c(lua_State* L, Proto *p, int func_id, LuaMirContext *ctx)
 {
-    opcode2c(ctx, func_id, p, true);
+    opcode2c(L, ctx, func_id, p, true);
     MCF("#define LUA_LIB\n");
     for(size_t i = 0; i < LUA_HEADER_LIST_SIZE; i++) {
         MCF("#include \"%s\"\n", lua_header_list[i]);
@@ -899,8 +922,7 @@ bool codegen_lua2c(Proto *p, int func_id, LuaMirContext *ctx)
         MCF("}\n");
     }
     MCF("setobj2n(L, &func->upvalue[%d], &h);\n", p->sizeupvalues);
-    MCF("GCObject *o = obj2gco(func);\n");
-    MCF("luaC_barrier(L, o, &h);\n");
+    MCF("luaC_barrier(L, func, &h);\n");
     
     MCF("}\n");
 
@@ -909,7 +931,7 @@ bool codegen_lua2c(Proto *p, int func_id, LuaMirContext *ctx)
     #ifdef JITDEBUG
     MCF("     printf(\"func_id is %d\\n\");\n", func_id);
     #endif
-    opcode2c(ctx, func_id, p, false);
+    opcode2c(L, ctx, func_id, p, false);
     MCF("return 0;\n");
     MCF("}\n");
     return true;
@@ -925,7 +947,7 @@ int convert_lua_to_ccode(lua_State *L, Proto *p)
     int fun_id = get_jit_funcid(L);
     sprintf(fname, "__jit_lfunc%d", fun_id);
     LuaMirContext *ctx = luamir_ctx_new();
-    if(!codegen_lua2c(p, fun_id, ctx)) {
+    if(!codegen_lua2c(L, p, fun_id, ctx)) {
         luamir_ctx_free(ctx);
         luaL_error(L, "codegen_lua2c failed");
         return 0;
@@ -946,7 +968,7 @@ lua_CFunction create_clua_func_from_lua(lua_State *L, Proto *p, int is_debug)
     int fun_id = get_jit_funcid(L);
     sprintf(fname, "__jit_lfunc%d", fun_id);
     LuaMirContext *ctx = luamir_ctx_new();
-    if(!codegen_lua2c(p, fun_id, ctx)) {
+    if(!codegen_lua2c(L, p, fun_id, ctx)) {
         luamir_ctx_free(ctx);
         luaL_error(L, "codegen_lua2c failed");
         return NULL;

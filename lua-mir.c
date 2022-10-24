@@ -50,7 +50,7 @@ static int l_ljit(lua_State *L)
         setobj2s(L, L->top, cl->upvals[i]->v);
         api_incr_top(L);
     }
-    lua_pushlclosure(L, cl);
+    lua_pushnil(L);
     lua_pushcclosure(L, func, nup + 1);
     CClosure *cc = lua_tocclosure(L, -1);
     for(int i = 0;i < nup; ++i)

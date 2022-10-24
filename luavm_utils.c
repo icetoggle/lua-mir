@@ -163,6 +163,18 @@ void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
   }
 }
 
+void pushcclosure(lua_State *L, lua_CFunction func, int nup, StkId ra) {
+  CClosure *ncl = luaF_newCclosure(L, nup);
+  ncl->f = func;
+  L->top -= nup;
+  setclCvalue(L, s2v(ra), ncl);  /* anchor new closure in stack */
+  while(nup--)
+  {
+    setobj2n(L, &ncl->upvalue[nup], s2v(L->top + nup));
+    luaC_barrier(L, ncl, &ncl->upvalue[nup]);
+  }
+}
+
 void print_stack(lua_State *L, StkId base) {
     int t = 20;
     printf("stack: \n");
@@ -213,7 +225,6 @@ void print_stack(lua_State *L, StkId base) {
 
 
 void print_valuelist(lua_State *L, TValue *k, int ksize) {
-    int t = 20;
     printf("kvalue: %lld\n", k);
     for (TValue *value = k; value != k + ksize; ++value) {
         switch (ttype(value))

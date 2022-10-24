@@ -1,8 +1,9 @@
-local function test_setlist(n)
-    local a = n
-    local t = {1, 2, 3, 4}
-    return t[2]
+local function test_pushclosure(a, b)
+    local function test(a, b)
+        return a + b
+    end
+    return test(a, b)
 end
 local luamir = require('luamir')
-print(luamir.lua2c(test_setlist))
-print(luamir.ljit(test_setlist)(3))
+print(luamir.lua2c(test_pushclosure))
+print(luamir.ljit(test_pushclosure)(1,2))
