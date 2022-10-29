@@ -208,12 +208,12 @@ void print_stack(lua_State *L, StkId base) {
             }
             case LUA_TTABLE:
             {
-                printf("table: %d\n", gcvalue(value));
+                printf("table: %lld\n", gcvalue(value));
                 break;
             }
             case LUA_TFUNCTION:
             {
-                printf("function: %d\n", gcvalue(value));
+                printf("function: %lld\n", gcvalue(value));
                 break;
             }
             break;

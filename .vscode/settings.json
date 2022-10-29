@@ -34,6 +34,7 @@
         "luaconf.h": "c",
         "typeinfo": "c",
         "luamir_ctx.h": "c",
-        "cctype": "c"
+        "cctype": "c",
+        "lapi.h": "c"
     }
 }

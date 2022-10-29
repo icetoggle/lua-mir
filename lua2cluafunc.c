@@ -786,23 +786,24 @@ void opcode2c(lua_State* L, LuaMirContext *ctx,int func_id, Proto *p, bool scan_
                     luaL_error(L, "create_clua_func_from_lua failed");
                     return;
                 }
-                MCF("lua_CFunction func = (lua_CFunction)%lld;\n", (long long)func);
+                MCF("lua_CFunction next_func = (lua_CFunction)%lld;\n", (long long)func);
                 MCF("int nup = %d;\n", next_p->sizeupvalues + 1);
+                MCF("L->top = base + %d + 1;\n", A);
                 for(int i = 0; i < next_p->sizeupvalues; i++)
                 {
                     if(uv[i].instack)
                     {
-                        MCF("setobj2s(L->top, s2v(base + %d));\n", uv[i].idx);
+                        MCF("setobj2s(L, L->top, s2v(base + %d));\n", uv[i].idx);
                         MCF("api_incr_top(L);\n");
                     }
                     else 
                     {
-                        MCF("setobj2s(L->top, &cl->upvalue[%d]);\n", uv[i].idx);
+                        MCF("setobj2s(L, L->top, &func->upvalue[%d]);\n", uv[i].idx);
                         MCF("api_incr_top(L);\n");
                     }
                 }
                 MCF("lua_pushnil(L);\n");
-                MCF("pushcclosure(L, func, nup, base + %d);\n", A);
+                MCF("pushcclosure(L, next_func, nup, base + %d);\n", A);
                 MCF("luaC_checkGC(L);\n");
                 MCF("}\n");
                 break;
@@ -823,8 +824,8 @@ void opcode2c(lua_State* L, LuaMirContext *ctx,int func_id, Proto *p, bool scan_
             // }
             case OP_VARARG:
             case OP_VARARGPREP:
-                printf("Unsupported opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
-                assert(false);
+                //printf("Unsupported opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
+                //assert(false);
                 break;
             default:
                 printf("Unknown opcode:  %-9s\n", opnames[GET_OPCODE(i)]);
